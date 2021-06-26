@@ -1,44 +1,50 @@
-//! STM32F103C8T6板级支持包
+//! STM32F103C8T6 BSP
 
 #![no_std]
 pub mod clocks;
+pub mod display;
 pub mod example;
 pub mod gpio;
 pub mod led;
-pub mod lte;
 pub mod net;
+pub mod sensor;
 pub mod serial;
 pub mod stdout;
-pub mod ultrasonic_wave;
-pub mod wifi;
 
-use hal::pac::Interrupt;
 pub use net::*;
 pub use serial::*;
-pub use stdout::configure as configure_stdout;
+pub use stdout::stdout;
 pub use stm32f1xx_hal as hal;
+
 pub struct Peripherals {
-    pub cp: cortex_m::Peripherals,
-    pub dp: stm32f1xx_hal::pac::Peripherals,
+    pub core: cortex_m::Peripherals,
+    pub device: stm32f1xx_hal::pac::Peripherals,
 }
+static mut TAKEN: bool = false;
 
 impl Peripherals {
-    pub fn take() -> (cortex_m::Peripherals, stm32f1xx_hal::pac::Peripherals) {
-        (
-            cortex_m::Peripherals::take().unwrap(),
-            stm32f1xx_hal::pac::Peripherals::take().unwrap(),
-        )
+    pub fn take() -> Option<Self> {
+        cortex_m::interrupt::free(|_| {
+            if unsafe { TAKEN } {
+                None
+            } else {
+                unsafe { TAKEN = true };
+                let core = cortex_m::Peripherals::take().unwrap();
+                let device = stm32f1xx_hal::pac::Peripherals::take().unwrap();
+                Some(Self { core, device })
+            }
+        })
     }
 }
 
-pub fn enable_interrupt(interrupt: Interrupt) {
+pub fn enable_interrupt(interrupt: hal::pac::Interrupt) {
     sprintln!("打开{:?}中断", interrupt);
     unsafe {
         cortex_m::peripheral::NVIC::unmask(interrupt);
     }
 }
 
-pub fn disable_interrupt(interrupt: Interrupt) {
+pub fn disable_interrupt(interrupt: hal::pac::Interrupt) {
     sprintln!("关闭{:?}中断", interrupt);
     cortex_m::peripheral::NVIC::mask(interrupt);
 }

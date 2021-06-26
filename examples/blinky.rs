@@ -27,15 +27,14 @@ fn main() -> ! {
     unsafe {
         ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE);
     }
-    let (cp, dp) = bluepill::Peripherals::take(); //核心设备、外围设备
-    let mut flash = dp.FLASH.constrain(); //Flash
-    let mut rcc = dp.RCC.constrain(); //RCC
-    let clocks = bluepill::clocks::init_full_clocks(rcc.cfgr, &mut flash.acr); //配置全速时钟
-    let mut delay = Delay::new(cp.SYST, clocks); //配置延时器
-    let mut gpioc = dp.GPIOC.split(&mut rcc.apb2);
+    let (core, device) = bluepill::Peripherals::take(); //核心设备、外围设备
+    let mut flash = device.FLASH.constrain(); //Flash
+    let mut rcc = device.RCC.constrain(); //RCC
+    let clocks = bluepill::clocks::full_clocks(rcc.cfgr, &mut flash.acr); //配置全速时钟
+    let mut delay = Delay::new(core.SYST, clocks); //配置延时器
+    let mut gpioc = device.GPIOC.split(&mut rcc.apb2);
     let mut led = Blink::configure(gpioc.pc13, &mut gpioc.crh); //配置LED
                                                                 //esp8266::init();
-
     sprintln!("hello bluepill led");
 
     loop {

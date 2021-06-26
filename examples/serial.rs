@@ -48,7 +48,7 @@ fn main() -> ! {
     let mut flash = dp.FLASH.constrain(); //Flash
     let mut rcc = dp.RCC.constrain(); //RCC
     let mut afio = dp.AFIO.constrain(&mut rcc.apb2);
-    let clocks = bluepill::clocks::init_full_clocks(rcc.cfgr, &mut flash.acr); //配置全速时钟
+    let clocks = bluepill::clocks::full_clocks(rcc.cfgr, &mut flash.acr); //配置全速时钟
     let mut gpioa = dp.GPIOA.split(&mut rcc.apb2);
     let mut gpioc = dp.GPIOC.split(&mut rcc.apb2);
 

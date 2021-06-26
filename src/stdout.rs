@@ -31,7 +31,7 @@ impl fmt::Write for SerialWrapper {
 }
 
 /// Configures stdout
-pub fn configure(tx: Tx<USART1>) {
+pub fn stdout(tx: Tx<USART1>) {
     interrupt::free(|_| unsafe {
         STDOUT.replace(SerialWrapper(tx));
     });

@@ -1,4 +1,5 @@
-//! 烟雾传感器
+//! 通过串口连接ESP8266模块，发送AT指令联网
+//!
 
 #![no_main]
 #![no_std]
@@ -7,36 +8,41 @@
 extern crate alloc;
 
 use core::fmt::Write;
-use core::time::Duration;
 
 use alloc_cortex_m::CortexMHeap;
 use bluepill::hal::delay::Delay;
 use bluepill::hal::prelude::*;
 use bluepill::led::{Blink, Led};
-use bluepill::sensor::HcSr04;
+use bluepill::sensor::MQ2;
 use bluepill::serial::BufRead;
 use bluepill::*;
+use core::cell::RefCell;
+use core::ops::MulAssign;
+use cortex_m::{asm::wfi, interrupt::Mutex};
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hprintln;
-use embedded_hal::blocking::delay::DelayUs;
-use embedded_hal::digital::v2::{InputPin, OutputPin};
+use embedded_hal::digital::v2::InputPin;
+use hal::gpio::gpioa::PA6;
+use hal::gpio::ExtiPin;
+use hal::gpio::PullDown;
 use hal::{
-    gpio::{IOPinSpeed, OutputSpeed},
+    gpio::IOPinSpeed,
+    gpio::Input,
+    gpio::OutputSpeed,
     pac::interrupt,
     pac::Interrupt,
     pac::{USART1, USART2},
     prelude::*,
     serial::{Config, Rx, Tx, *},
-    time::{Instant, MonoTimer},
-    timer::Timer,
 };
 use heapless::Vec;
 use panic_semihosting as _;
+
 /// 堆内存分配器
 #[global_allocator]
 static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
-/// 堆内存 12K
-const HEAP_SIZE: usize = 1024 * 12;
+/// 堆内存 16K
+const HEAP_SIZE: usize = 16384;
 
 #[entry]
 fn main() -> ! {
@@ -52,11 +58,10 @@ fn main() -> ! {
     let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
 
     ////////////////初始化设备///////////////////
-    let timer = MonoTimer::new(p.core.DWT, p.core.DCB, clocks);
     let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
     let mut led = Blink::configure(gpioc.pc13, &mut gpioc.crh); //配置LED
 
-    let (tx, _) = bluepill::serial::usart1(
+    let (mut stdout, _) = bluepill::serial::usart1(
         p.device.USART1,
         (gpioa.pa9, gpioa.pa10),
         &mut afio.mapr,
@@ -65,19 +70,16 @@ fn main() -> ! {
         &mut rcc.apb2,
         &mut gpioa.crh,
     );
-    bluepill::stdout(tx);
-    let mut trigger = gpioa.pa0.into_push_pull_output(&mut gpioa.crl); //.into_alternate_push_pull(&mut gpioa.crl);
-    trigger.set_speed(&mut gpioa.crl, IOPinSpeed::Mhz50);
-    let echo = gpioa.pa1.into_pull_down_input(&mut gpioa.crl); // 下拉输入
-    let mut sensor = HcSr04::new((trigger, echo), delay, timer);
-    let mut tim = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz());
-    tim.start(100.ms());
-    sprintln!("超声波测距");
+    bluepill::stdout(stdout);
+
+    let mut aout = gpioa.pa6.into_pull_down_input(&mut gpioa.crl);
+    let mq2 = MQ2::new(aout);
+    sprintln!("烟雾传感器");
     loop {
         led.toggle();
-        let distance = sensor.measure().unwrap();
-        sprintln!("距离:{}毫米", distance.mm());
-        nb::block!(tim.wait()).ok();
+        nb::block!(mq2.wait()).ok();
+        sprintln!("Alart!");
+        delay.delay_ms(1000u32);
     }
 }
 

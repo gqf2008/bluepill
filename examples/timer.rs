@@ -20,7 +20,6 @@ use core::cell::RefCell;
 use core::ops::MulAssign;
 use cortex_m::{asm::wfi, interrupt::Mutex};
 use cortex_m_rt::entry;
-use embedded_hal::blocking::delay::{DelayMs, DelayUs};
 use embedded_hal::timer::Cancel;
 use panic_semihosting as _;
 use stm32f1xx_hal::pac::interrupt;
@@ -42,13 +41,13 @@ fn main() -> ! {
     let mut flash = dp.FLASH.constrain(); //Flash
     let mut rcc = dp.RCC.constrain(); //RCC
     let mut afio = dp.AFIO.constrain(&mut rcc.apb2);
-    let clocks = bluepill::clocks::init_full_clocks(rcc.cfgr, &mut flash.acr); //配置全速时钟
-                                                                               //let mut delay = Delay::new(cp.SYST, clocks); //配置延时器
+    let clocks = bluepill::clocks::full_clocks(rcc.cfgr, &mut flash.acr); //配置全速时钟
+                                                                          //let mut delay = Delay::new(cp.SYST, clocks); //配置延时器
     let mut gpioa = dp.GPIOA.split(&mut rcc.apb2);
     let mut gpioc = dp.GPIOC.split(&mut rcc.apb2);
 
     ////////////////初始化设备///////////////////
-    //let mut delay = Delay::new(cp.SYST, clocks); //配置延时器
+    let mut delay1 = Delay::new(cp.SYST, clocks); //配置延时器
     let (tx, _) = bluepill::serial::usart1(
         dp.USART1,
         (gpioa.pa9, gpioa.pa10),
@@ -60,7 +59,7 @@ fn main() -> ! {
     );
     bluepill::configure_stdout(tx);
     let mut led = Blink::configure(gpioc.pc13, &mut gpioc.crh); //配置LED
-    let mut timer = Timer::tim1(dp.TIM1, &clocks, &mut rcc.apb2).start_count_down(500.ms());
+    let mut timer = Timer::tim1(dp.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz());
     let mut delay = Timer::tim2(dp.TIM2, &clocks, &mut rcc.apb1).start_count_down(1.hz());
     //delay.start(3000.ms());
     //let mut timer = Timer::syst(cp.SYST, &clocks).start_count_down(1.hz());
@@ -78,7 +77,29 @@ fn main() -> ! {
 
     sprintln!("hello timer led");
     loop {
-        cortex_m::asm::wfi();
+        sprintln!("listen timer");
+        cortex_m::interrupt::free(|cs| {
+            // Move TIMER pin here, leaving a None in its place
+            TIMER
+                .borrow(cs)
+                .borrow_mut()
+                .as_mut()
+                .unwrap()
+                .listen(Event::Update);
+        });
+        delay1.delay_ms(5000u32);
+        sprintln!("unlisten timer");
+        cortex_m::interrupt::free(|cs| {
+            // Move TIMER pin here, leaving a None in its place
+            TIMER
+                .borrow(cs)
+                .borrow_mut()
+                .as_mut()
+                .unwrap()
+                .unlisten(Event::Update);
+        });
+        delay1.delay_ms(5000u32);
+        //cortex_m::asm::wfi();
     }
 }
 
@@ -110,35 +131,6 @@ unsafe fn TIM2() {
 
     led.toggle();
     tim.wait().ok();
-    //tim.start(3000.ms());
-    if led.is_set_low().unwrap() {
-        cortex_m::interrupt::free(|cs| {
-            // Move TIMER pin here, leaving a None in its place
-            TIMER
-                .borrow(cs)
-                .borrow_mut()
-                .as_mut()
-                .unwrap()
-                .unlisten(Event::Update);
-        });
-    } else {
-        cortex_m::interrupt::free(|cs| {
-            // Move TIMER pin here, leaving a None in its place
-            TIMER
-                .borrow(cs)
-                .borrow_mut()
-                .as_mut()
-                .unwrap()
-                .listen(Event::Update);
-        });
-    }
-
-    // cortex_m::peripheral::NVIC::unpend(Interrupt::TIM1_UP);
-    // if cortex_m::peripheral::NVIC::is_pending(Interrupt::TIM1_UP) {
-    //     //cortex_m::peripheral::NVIC::unpend(Interrupt::TIM1_UP);
-    // } else {
-    //     //cortex_m::peripheral::NVIC::pend(Interrupt::TIM1_UP);
-    // }
 }
 
 static mut COUNT: u32 = 0;

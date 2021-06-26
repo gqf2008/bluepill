@@ -54,9 +54,9 @@ pub(crate) static mut PA4: MaybeUninit<PA4<Input<PullDown>>> = MaybeUninit::unin
 
 #[inline]
 pub fn init() {
-    let (cp, p) = crate::Peripherals::take();
-    let mut flash = p.FLASH.constrain();
-    let mut rcc = p.RCC.constrain();
+    let p = crate::Peripherals::take().unwrap();
+    let mut flash = p.device.FLASH.constrain();
+    let mut rcc = p.device.RCC.constrain();
     let clocks = rcc
         .cfgr
         .use_hse(8.mhz())
@@ -65,16 +65,15 @@ pub fn init() {
         .pclk2(24.mhz())
         .freeze(&mut flash.acr);
     assert!(clocks.usbclk_valid());
-    let mut afio = p.AFIO.constrain(&mut rcc.apb2);
-    let mut gpioa = p.GPIOA.split(&mut rcc.apb2);
-    let mut gpiob = p.GPIOB.split(&mut rcc.apb2);
-    let mut gpioc = p.GPIOC.split(&mut rcc.apb2);
-
+    let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
+    let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
+    let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
+    let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
     //初始化USART1
     let tx = gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh);
     let rx = gpioa.pa10;
     let stdout = Serial::usart1(
-        p.USART1,
+        p.device.USART1,
         (tx, rx),
         &mut afio.mapr,
         Config::default().baudrate(115200.bps()),
@@ -91,7 +90,7 @@ pub fn init() {
     sprintln!("初始化延时器");
     //初始化延时器
     unsafe {
-        DELAY.as_mut_ptr().write(Delay::new(cp.SYST, clocks));
+        DELAY.as_mut_ptr().write(Delay::new(p.core.SYST, clocks));
     }
 
     sprintln!("初始化定时器");
@@ -99,22 +98,22 @@ pub fn init() {
     unsafe {
         TIMER1
             .as_mut_ptr()
-            .write(Timer::tim1(p.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz()));
+            .write(Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz()));
         TIMER2
             .as_mut_ptr()
-            .write(Timer::tim2(p.TIM2, &clocks, &mut rcc.apb1).start_count_down(1.hz()));
+            .write(Timer::tim2(p.device.TIM2, &clocks, &mut rcc.apb1).start_count_down(1.hz()));
         TIMER3
             .as_mut_ptr()
-            .write(Timer::tim3(p.TIM3, &clocks, &mut rcc.apb1).start_count_down(1.hz()));
+            .write(Timer::tim3(p.device.TIM3, &clocks, &mut rcc.apb1).start_count_down(1.hz()));
         TIMER4
             .as_mut_ptr()
-            .write(Timer::tim4(p.TIM4, &clocks, &mut rcc.apb1).start_count_down(1.hz()));
+            .write(Timer::tim4(p.device.TIM4, &clocks, &mut rcc.apb1).start_count_down(1.hz()));
     }
 
     //初始化DMA通道
     sprintln!("初始化DMA1通道");
     unsafe {
-        DMA1.as_mut_ptr().write(p.DMA1.split(&mut rcc.ahb));
+        DMA1.as_mut_ptr().write(p.device.DMA1.split(&mut rcc.ahb));
 
         // hprintln!("初始化DMA2通道").unwrap();//打开DMA2会导致设备奔溃
         // DMA2.as_mut_ptr().write(p.DMA2.split(&mut rcc.ahb));
@@ -134,7 +133,7 @@ pub fn init() {
         let rx = gpioa.pa3;
 
         let serial = Serial::usart2(
-            p.USART2,
+            p.device.USART2,
             (tx, rx),
             &mut afio.mapr,
             Config::default().baudrate(115200.bps()),
@@ -157,7 +156,7 @@ pub fn init() {
         let rx = gpiob.pb11;
 
         let serial = Serial::usart3(
-            p.USART3,
+            p.device.USART3,
             (tx, rx),
             &mut afio.mapr,
             Config::default().baudrate(115200.bps()),

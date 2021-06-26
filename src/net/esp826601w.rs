@@ -1,3 +1,5 @@
+//! ESP8266-01w模块
+
 use anyhow::anyhow;
 use anyhow::Result;
 use core::fmt::Write;
@@ -15,7 +17,7 @@ use stm32f1xx_hal::{
     prelude::*,
     serial::{Config, Rx, Serial, Tx},
 };
-//AT+CWJAP_DEF="Wosai-Guest","Shouqianba$520" 连接WIFI
+//AT+CWJAP_DEF="ssid","paasword" 连接WIFI
 //AT+CIPSTAMAC_CUR? 查MAC地址
 //AT+CWAUTOCONN=1 上电自动连接WIFI
 //AT+CIPSTA_CUR? 查IP地址信息
@@ -23,7 +25,7 @@ use stm32f1xx_hal::{
 //TCP客户端
 //AT+CIPSTATUS 查询连接状态
 //AT+CIFSR 查询设备IP地址
-//AT+CIPDOMAIN="www.shouqianba.com" 域名解析
+//AT+CIPDOMAIN="www.baidu.com" 域名解析
 //AT+CIPSTART="TCP","iot.espressif.cn",8000 建立TCP连接
 //AT+CIPSTART="TCP","192.168.101.110",1000 建立TCP连接
 //AT+CIPSSLSIZE=4096 设置TCP缓冲区

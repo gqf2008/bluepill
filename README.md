@@ -16,6 +16,34 @@
 | 蓝线-TX | RX-A10   |
 | GND     | GND      |
 
+### SSD1306 OLED
+
+| SSD1306 | BLUEPILL |
+| ------- | -------- |
+| Vcc     | 3.3      |
+| GND     | GND      |
+| SCL     | PB8      |
+| SDA     | PB9      |
+
+
+### HR-SR04超声波模块
+
+| HR-SR04 | BLUEPILL |
+| ------- | -------- |
+| Vcc     | 5V       |
+| Trig    | A0       |
+| Echo    | A4       |
+| GND     | GND      |
+
+### MQ2烟雾传感器
+
+| MQ2  | BLUEPILL |
+| ---- | -------- |
+| Vcc  | 3.3      |
+| AOUT | A6       |
+| DOUT | A7       |
+| GND  | GND      |
+
 ### ESP8266-01S WIFI模块
 
 ![RUNOOB 图标](esp8266-01w.jpg "RUNOOB")
@@ -28,11 +56,4 @@
 | RST      |          |
 | GND      | GND      |
 
-### HR-SR04超声波模块
 
-| HR-SR04 | BLUEPILL |
-| ------- | -------- |
-| Vcc     | 5V       |
-| Trig    | A0       |
-| Echo    | A4       |
-| GND     | GND      |

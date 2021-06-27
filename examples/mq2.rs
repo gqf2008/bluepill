@@ -16,7 +16,6 @@ use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
 use bluepill::led::Led;
 use bluepill::sensor::MQ2;
-use bluepill::serial::BufRead;
 use bluepill::*;
 use core::cell::RefCell;
 use core::ops::MulAssign;
@@ -63,16 +62,20 @@ fn main() -> ! {
     let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
     let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh); //配置LED
 
-    let (mut stdout, _) = bluepill::serial::usart1(
+    let (mut stdout, _) = bluepill::hal::serial::Serial::usart1(
         p.device.USART1,
-        (gpioa.pa9, gpioa.pa10),
+        (
+            gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh),
+            gpioa.pa10,
+        ),
         &mut afio.mapr,
         Config::default().baudrate(115200.bps()),
         clocks,
         &mut rcc.apb2,
-        &mut gpioa.crh,
-    );
-    bluepill::stdout(stdout);
+    )
+    .split();
+    stdout.to_stdout();
+    //bluepill::stdout(stdout);
 
     let mut aout = gpioa.pa6.into_pull_down_input(&mut gpioa.crl);
     let mq2 = MQ2::new(aout);

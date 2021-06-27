@@ -15,8 +15,6 @@ use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
 use bluepill::led::Led;
-use bluepill::serial::BufRead;
-use bluepill::*;
 use bluepill::*;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hprintln;
@@ -56,24 +54,30 @@ fn main() -> ! {
     let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
     let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh); //配置LED
 
-    let (mut stdout, mut stdin) = bluepill::serial::usart1(
+    let (mut stdout, mut stdin) = bluepill::hal::serial::Serial::usart1(
         p.device.USART1,
-        (gpioa.pa9, gpioa.pa10),
+        (
+            gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh),
+            gpioa.pa10,
+        ),
         &mut afio.mapr,
         Config::default().baudrate(115200.bps()),
         clocks,
         &mut rcc.apb2,
-        &mut gpioa.crh,
-    );
-    let (mut tx2, mut rx2) = bluepill::serial::usart2(
+    )
+    .split();
+    let (mut tx2, mut rx2) = bluepill::hal::serial::Serial::usart2(
         p.device.USART2,
-        (gpioa.pa2, gpioa.pa3),
+        (
+            gpioa.pa2.into_alternate_push_pull(&mut gpioa.crl),
+            gpioa.pa3,
+        ),
         &mut afio.mapr,
         Config::default().baudrate(115200.bps()),
         clocks,
         &mut rcc.apb1,
-        &mut gpioa.crl,
-    );
+    )
+    .split();
 
     stdin.listen();
     rx2.listen();

@@ -17,7 +17,7 @@ use bluepill::hal::serial::Config;
 use bluepill::hal::timer::CountDownTimer;
 use bluepill::hal::timer::Timer;
 use bluepill::led::Led;
-use bluepill::sprintln;
+use bluepill::*;
 use core::cell::RefCell;
 use core::ops::MulAssign;
 use cortex_m::{asm::wfi, interrupt::Mutex};
@@ -50,16 +50,20 @@ fn main() -> ! {
 
     ////////////////初始化设备///////////////////
     let mut delay1 = Delay::new(p.core.SYST, clocks); //配置延时器
-    let (tx, _) = bluepill::serial::usart1(
+    let (mut tx, _) = bluepill::hal::serial::Serial::usart1(
         p.device.USART1,
-        (gpioa.pa9, gpioa.pa10),
+        (
+            gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh),
+            gpioa.pa10,
+        ),
         &mut afio.mapr,
         Config::default().baudrate(115200.bps()),
         clocks,
         &mut rcc.apb2,
-        &mut gpioa.crh,
-    );
-    bluepill::stdout(tx);
+    )
+    .split();
+    tx.to_stdout();
+
     let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh); //配置LED
     let mut timer = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz());
     let mut delay = Timer::tim2(p.device.TIM2, &clocks, &mut rcc.apb1).start_count_down(1.hz());

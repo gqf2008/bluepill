@@ -14,7 +14,6 @@ use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
 use bluepill::led::Led;
 use bluepill::sensor::HcSr04;
-use bluepill::serial::BufRead;
 use bluepill::*;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hprintln;
@@ -55,16 +54,19 @@ fn main() -> ! {
     let timer = MonoTimer::new(p.core.DWT, p.core.DCB, clocks);
     let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
     let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh); //配置LED
-    let (tx, _) = bluepill::serial::usart1(
+    let (mut tx, _) = bluepill::hal::serial::Serial::usart1(
         p.device.USART1,
-        (gpioa.pa9, gpioa.pa10),
+        (
+            gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh),
+            gpioa.pa10,
+        ),
         &mut afio.mapr,
         Config::default().baudrate(115200.bps()),
         clocks,
         &mut rcc.apb2,
-        &mut gpioa.crh,
-    );
-    bluepill::stdout(tx);
+    )
+    .split();
+    tx.to_stdout();
     let mut trigger = gpioa.pa0.into_push_pull_output(&mut gpioa.crl); //.into_alternate_push_pull(&mut gpioa.crl);
     trigger.set_speed(&mut gpioa.crl, IOPinSpeed::Mhz50);
     let echo = gpioa.pa1.into_pull_down_input(&mut gpioa.crl); // 下拉输入

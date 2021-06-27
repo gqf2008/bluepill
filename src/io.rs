@@ -1,11 +1,53 @@
+extern crate alloc;
+use alloc::string::String;
+use alloc::vec::Vec;
 use core::fmt;
 use cortex_m::interrupt;
-use embedded_hal::serial::Write;
+use embedded_hal::serial::{Read, Write};
 use nb::block;
 use stm32f1xx_hal::pac::USART1;
 use stm32f1xx_hal::serial::Tx;
 
 static mut STDOUT: Option<SerialWrapper> = None;
+
+pub trait BufRead: Read<u8> {
+    fn read_line(&mut self) -> core::result::Result<String, Self::Error> {
+        let mut str = String::new();
+        let buf = unsafe { str.as_mut_vec() };
+        self.read_until('\n' as u8, buf)?;
+        Ok(str)
+    }
+    fn read_until(
+        &mut self,
+        byte: u8,
+        buf: &mut Vec<u8>,
+    ) -> core::result::Result<usize, Self::Error> {
+        let mut read = 0;
+        loop {
+            match nb::block!(self.read()) {
+                Ok(b) => {
+                    if b == byte {
+                        break;
+                    }
+                    buf.push(b);
+                    read += 1;
+                }
+                Err(err) => return Err(err),
+            }
+        }
+        Ok(read)
+    }
+    fn read_exact(&mut self, buf: &mut [u8]) -> core::result::Result<(), Self::Error> {
+        buf.iter_mut()
+            .try_for_each(|b| match nb::block!(self.read()) {
+                Ok(r) => {
+                    *b = r;
+                    Ok(())
+                }
+                Err(err) => return Err(err),
+            })
+    }
+}
 
 struct SerialWrapper(Tx<USART1>);
 
@@ -30,11 +72,16 @@ impl fmt::Write for SerialWrapper {
     }
 }
 
-/// Configures stdout
-pub fn stdout(tx: Tx<USART1>) {
-    interrupt::free(|_| unsafe {
-        STDOUT.replace(SerialWrapper(tx));
-    });
+pub trait Stdout {
+    fn to_stdout(self);
+}
+
+impl Stdout for Tx<USART1> {
+    fn to_stdout(self) {
+        interrupt::free(|_| unsafe {
+            STDOUT.replace(SerialWrapper(self));
+        });
+    }
 }
 
 /// Writes string to stdout
@@ -70,12 +117,12 @@ macro_rules! sprint {
 #[macro_export]
 macro_rules! sprintln {
     () => {
-        $crate::stdout::write_str("\n")
+        $crate::io::write_str("\n")
     };
     ($s:expr) => {
-        $crate::stdout::write_str(concat!($s, "\n"))
+        $crate::io::write_str(concat!($s, "\n"))
     };
     ($s:expr, $($tt:tt)*) => {
-        $crate::stdout::write_fmt(format_args!(concat!($s, "\n"), $($tt)*))
+        $crate::io::write_fmt(format_args!(concat!($s, "\n"), $($tt)*))
     };
 }

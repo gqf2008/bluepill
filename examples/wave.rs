@@ -70,7 +70,7 @@ fn main() -> ! {
     let echo = gpioa.pa1.into_pull_down_input(&mut gpioa.crl); // 下拉输入
     let mut sensor = HcSr04::new((trigger, echo), delay, timer);
     let mut tim = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz());
-    //tim.start(5000.ms());
+
     sprintln!("超声波测距");
     loop {
         led.toggle();

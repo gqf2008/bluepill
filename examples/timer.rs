@@ -16,7 +16,6 @@ use bluepill::hal::prelude::*;
 use bluepill::hal::serial::Config;
 use bluepill::hal::timer::CountDownTimer;
 use bluepill::hal::timer::Timer;
-use bluepill::led::Led;
 use bluepill::*;
 use core::cell::RefCell;
 use core::ops::MulAssign;
@@ -64,7 +63,7 @@ fn main() -> ! {
     .split();
     tx.to_stdout();
 
-    let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh); //配置LED
+    let mut led = gpioc.pc13.to_led(&mut gpioc.crh); //配置LED
     let mut timer = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz());
     let mut delay = Timer::tim2(p.device.TIM2, &clocks, &mut rcc.apb1).start_count_down(1.hz());
     //delay.start(3000.ms());

@@ -14,7 +14,6 @@ use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
-use bluepill::led::Led;
 use bluepill::sensor::MQ2;
 use bluepill::*;
 use core::cell::RefCell;
@@ -60,7 +59,7 @@ fn main() -> ! {
 
     ////////////////初始化设备///////////////////
     let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
-    let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh); //配置LED
+    let mut led = gpioc.pc13.to_led(&mut gpioc.crh); //配置LED
 
     let (mut stdout, _) = bluepill::hal::serial::Serial::usart1(
         p.device.USART1,
@@ -77,8 +76,7 @@ fn main() -> ! {
     stdout.to_stdout();
     //bluepill::stdout(stdout);
 
-    let mut aout = gpioa.pa6.into_pull_down_input(&mut gpioa.crl);
-    let mq2 = MQ2::new(aout);
+    let mq2 = MQ2::new(gpioa.pa6.into_pull_down_input(&mut gpioa.crl));
     sprintln!("烟雾传感器");
     loop {
         led.toggle();

@@ -3,14 +3,14 @@
 #![no_std]
 pub mod clocks;
 pub mod display;
-pub mod example;
 pub mod gpio;
 pub mod io;
 pub mod led;
 pub mod net;
 pub mod sensor;
 
-pub use io::*;
+pub use clocks::*;
+pub use led::*;
 pub use net::*;
 pub use stm32f1xx_hal as hal;
 

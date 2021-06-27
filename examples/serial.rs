@@ -14,7 +14,6 @@ use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
-use bluepill::led::Led;
 use bluepill::*;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hprintln;
@@ -52,7 +51,7 @@ fn main() -> ! {
     let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
 
     let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
-    let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh); //配置LED
+    let mut led = gpioc.pc13.to_led(&mut gpioc.crh); //配置LED
 
     let (mut stdout, mut stdin) = bluepill::hal::serial::Serial::usart1(
         p.device.USART1,

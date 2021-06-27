@@ -1,6 +1,3 @@
-extern crate alloc;
-use alloc::string::String;
-use alloc::vec::Vec;
 use core::fmt;
 use cortex_m::interrupt;
 use embedded_hal::serial::{Read, Write};
@@ -11,32 +8,37 @@ use stm32f1xx_hal::serial::Tx;
 static mut STDOUT: Option<SerialWrapper> = None;
 
 pub trait BufRead: Read<u8> {
-    fn read_line(&mut self) -> core::result::Result<String, Self::Error> {
-        let mut str = String::new();
-        let buf = unsafe { str.as_mut_vec() };
-        self.read_until('\n' as u8, buf)?;
-        Ok(str)
-    }
-    fn read_until(
-        &mut self,
-        byte: u8,
-        buf: &mut Vec<u8>,
-    ) -> core::result::Result<usize, Self::Error> {
-        let mut read = 0;
-        loop {
-            match nb::block!(self.read()) {
-                Ok(b) => {
-                    if b == byte {
-                        break;
-                    }
-                    buf.push(b);
-                    read += 1;
-                }
-                Err(err) => return Err(err),
-            }
-        }
-        Ok(read)
-    }
+    // extern crate alloc;
+    // use alloc::string::String;
+    // fn read_line(&mut self) -> core::result::Result<String, Self::Error> {
+    //     extern crate alloc;
+    //     use alloc::string::String;
+    //     use alloc::vec::Vec;
+    //     let mut str = String::new();
+    //     let buf = unsafe { str.as_mut_vec() };
+    //     self.read_until('\n' as u8, buf)?;
+    //     Ok(str)
+    // }
+    // fn read_until(
+    //     &mut self,
+    //     byte: u8,
+    //     buf: &mut Vec<u8>,
+    // ) -> core::result::Result<usize, Self::Error> {
+    //     let mut read = 0;
+    //     loop {
+    //         match nb::block!(self.read()) {
+    //             Ok(b) => {
+    //                 if b == byte {
+    //                     break;
+    //                 }
+    //                 buf.push(b);
+    //                 read += 1;
+    //             }
+    //             Err(err) => return Err(err),
+    //         }
+    //     }
+    //     Ok(read)
+    // }
     fn read_exact(&mut self, buf: &mut [u8]) -> core::result::Result<(), Self::Error> {
         buf.iter_mut()
             .try_for_each(|b| match nb::block!(self.read()) {
@@ -106,10 +108,10 @@ pub fn write_fmt(args: fmt::Arguments) {
 #[macro_export]
 macro_rules! sprint {
     ($s:expr) => {
-        $crate::stdout::write_str($s)
+        $crate::io::write_str($s)
     };
     ($($tt:tt)*) => {
-        $crate::stdout::write_fmt(format_args!($($tt)*))
+        $crate::io::write_fmt(format_args!($($tt)*))
     };
 }
 

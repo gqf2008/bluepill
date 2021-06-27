@@ -1,9 +1,8 @@
 //!超声波测距传感器
 
-extern crate embedded_hal as hal;
 use crate::hal::time::MonoTimer;
-use hal::blocking::delay::DelayUs;
-use hal::digital::v2::{InputPin, OutputPin};
+use embedded_hal::blocking::delay::DelayUs;
+use embedded_hal::digital::v2::{InputPin, OutputPin};
 
 #[derive(Debug)]
 pub enum Error {
@@ -58,15 +57,18 @@ where
     }
 
     pub fn measure(&mut self) -> Result<Distance> {
+        //发送信号
         self.trig.set_high().ok();
-        self.delay.delay_us(10u32);
+        self.delay.delay_us(20u32);
         self.trig.set_low().ok();
         let start_wait = self.timer.now();
+        //等高电平
         while let Ok(true) = self.echo.is_low() {
             if start_wait.elapsed() > self.timer.frequency().0 {
                 return Err(Error::Timeout);
             }
         }
+        //等低电平（高电平持续的时间就是信号往返的时间）
         let start_instant = self.timer.now();
         while let Ok(true) = self.echo.is_high() {
             if start_instant.elapsed() > self.timer.frequency().0 {
@@ -74,6 +76,7 @@ where
             }
         }
         let ticks = start_instant.elapsed();
+
         Ok(Distance(ticks / self.timer.frequency().0 * 340 / 2 * 100))
     }
 }

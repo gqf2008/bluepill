@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use core::fmt::Write;
 use cortex_m::singleton;
-use cortex_m_semihosting::hprintln;
+
 use nb::block;
 use stm32f1xx_hal::{
     dma::{dma1::C2, dma1::C3, RxDma, TxDma},

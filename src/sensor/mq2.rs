@@ -1,8 +1,6 @@
 //!烟雾传感器
 
-extern crate embedded_hal as hal;
-
-use hal::digital::v2::InputPin;
+use embedded_hal::digital::v2::InputPin;
 
 pub struct MQ2<Pin> {
     aout: Pin,

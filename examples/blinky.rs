@@ -9,13 +9,14 @@ extern crate alloc;
 
 use alloc_cortex_m::CortexMHeap;
 use bluepill::hal::delay::Delay;
+use bluepill::hal::gpio::gpioc::PC13;
+use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
-use bluepill::led::{Blink, Led};
+use bluepill::led::Led;
 use bluepill::sprintln;
 use cortex_m_rt::entry;
 use embedded_hal::blocking::delay::{DelayMs, DelayUs};
 use panic_semihosting as _;
-
 /// 堆内存分配器
 #[global_allocator]
 static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
@@ -27,14 +28,14 @@ fn main() -> ! {
     unsafe {
         ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE);
     }
-    let (core, device) = bluepill::Peripherals::take(); //核心设备、外围设备
-    let mut flash = device.FLASH.constrain(); //Flash
-    let mut rcc = device.RCC.constrain(); //RCC
+    let p = bluepill::Peripherals::take().unwrap(); //核心设备、外围设备
+    let mut flash = p.device.FLASH.constrain(); //Flash
+    let mut rcc = p.device.RCC.constrain(); //RCC
     let clocks = bluepill::clocks::full_clocks(rcc.cfgr, &mut flash.acr); //配置全速时钟
-    let mut delay = Delay::new(core.SYST, clocks); //配置延时器
-    let mut gpioc = device.GPIOC.split(&mut rcc.apb2);
-    let mut led = Blink::configure(gpioc.pc13, &mut gpioc.crh); //配置LED
-                                                                //esp8266::init();
+    let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
+    let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
+    let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh); //配置LED
+                                                                    //esp8266::init();
     sprintln!("hello bluepill led");
 
     loop {

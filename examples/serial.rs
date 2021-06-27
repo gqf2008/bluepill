@@ -11,14 +11,15 @@ use core::fmt::Write;
 
 use alloc_cortex_m::CortexMHeap;
 use bluepill::hal::delay::Delay;
+use bluepill::hal::gpio::gpioc::PC13;
+use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
-use bluepill::led::{Blink, Led};
+use bluepill::led::Led;
 use bluepill::serial::BufRead;
+use bluepill::*;
 use bluepill::*;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hprintln;
-
-use bluepill::*;
 use hal::{
     pac::interrupt,
     pac::Interrupt,
@@ -44,19 +45,19 @@ fn main() -> ! {
     unsafe {
         ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE);
     }
-    let (cp, dp) = bluepill::Peripherals::take(); //核心设备、外围设备
-    let mut flash = dp.FLASH.constrain(); //Flash
-    let mut rcc = dp.RCC.constrain(); //RCC
-    let mut afio = dp.AFIO.constrain(&mut rcc.apb2);
+    let p = bluepill::Peripherals::take().unwrap(); //核心设备、外围设备
+    let mut flash = p.device.FLASH.constrain(); //Flash
+    let mut rcc = p.device.RCC.constrain(); //RCC
+    let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
     let clocks = bluepill::clocks::full_clocks(rcc.cfgr, &mut flash.acr); //配置全速时钟
-    let mut gpioa = dp.GPIOA.split(&mut rcc.apb2);
-    let mut gpioc = dp.GPIOC.split(&mut rcc.apb2);
+    let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
+    let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
 
-    let mut delay = Delay::new(cp.SYST, clocks); //配置延时器
-    let mut led = Blink::configure(gpioc.pc13, &mut gpioc.crh); //配置LED
+    let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
+    let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh); //配置LED
 
     let (mut stdout, mut stdin) = bluepill::serial::usart1(
-        dp.USART1,
+        p.device.USART1,
         (gpioa.pa9, gpioa.pa10),
         &mut afio.mapr,
         Config::default().baudrate(115200.bps()),
@@ -65,7 +66,7 @@ fn main() -> ! {
         &mut gpioa.crh,
     );
     let (mut tx2, mut rx2) = bluepill::serial::usart2(
-        dp.USART2,
+        p.device.USART2,
         (gpioa.pa2, gpioa.pa3),
         &mut afio.mapr,
         Config::default().baudrate(115200.bps()),

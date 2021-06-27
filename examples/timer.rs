@@ -9,12 +9,14 @@ extern crate alloc;
 
 use alloc_cortex_m::CortexMHeap;
 use bluepill::hal::delay::Delay;
+use bluepill::hal::gpio::gpioc::PC13;
+use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::pac::{TIM1, TIM2};
 use bluepill::hal::prelude::*;
 use bluepill::hal::serial::Config;
 use bluepill::hal::timer::CountDownTimer;
 use bluepill::hal::timer::Timer;
-use bluepill::led::{Blink, Led};
+use bluepill::led::Led;
 use bluepill::sprintln;
 use core::cell::RefCell;
 use core::ops::MulAssign;
@@ -37,19 +39,19 @@ fn main() -> ! {
     unsafe {
         ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE);
     }
-    let (cp, dp) = bluepill::Peripherals::take(); //核心设备、外围设备
-    let mut flash = dp.FLASH.constrain(); //Flash
-    let mut rcc = dp.RCC.constrain(); //RCC
-    let mut afio = dp.AFIO.constrain(&mut rcc.apb2);
+    let p = bluepill::Peripherals::take().unwrap(); //核心设备、外围设备
+    let mut flash = p.device.FLASH.constrain(); //Flash
+    let mut rcc = p.device.RCC.constrain(); //RCC
+    let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
     let clocks = bluepill::clocks::full_clocks(rcc.cfgr, &mut flash.acr); //配置全速时钟
                                                                           //let mut delay = Delay::new(cp.SYST, clocks); //配置延时器
-    let mut gpioa = dp.GPIOA.split(&mut rcc.apb2);
-    let mut gpioc = dp.GPIOC.split(&mut rcc.apb2);
+    let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
+    let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
 
     ////////////////初始化设备///////////////////
-    let mut delay1 = Delay::new(cp.SYST, clocks); //配置延时器
+    let mut delay1 = Delay::new(p.core.SYST, clocks); //配置延时器
     let (tx, _) = bluepill::serial::usart1(
-        dp.USART1,
+        p.device.USART1,
         (gpioa.pa9, gpioa.pa10),
         &mut afio.mapr,
         Config::default().baudrate(115200.bps()),
@@ -57,10 +59,10 @@ fn main() -> ! {
         &mut rcc.apb2,
         &mut gpioa.crh,
     );
-    bluepill::configure_stdout(tx);
-    let mut led = Blink::configure(gpioc.pc13, &mut gpioc.crh); //配置LED
-    let mut timer = Timer::tim1(dp.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz());
-    let mut delay = Timer::tim2(dp.TIM2, &clocks, &mut rcc.apb1).start_count_down(1.hz());
+    bluepill::stdout(tx);
+    let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh); //配置LED
+    let mut timer = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz());
+    let mut delay = Timer::tim2(p.device.TIM2, &clocks, &mut rcc.apb1).start_count_down(1.hz());
     //delay.start(3000.ms());
     //let mut timer = Timer::syst(cp.SYST, &clocks).start_count_down(1.hz());
     timer.listen(Event::Update);
@@ -112,7 +114,7 @@ fn alloc_error(_layout: core::alloc::Layout) -> ! {
 
 #[interrupt]
 unsafe fn TIM2() {
-    static mut LED: Option<Blink> = None;
+    static mut LED: Option<PC13<Output<PushPull>>> = None;
     static mut TIM: Option<CountDownTimer<TIM2>> = None;
 
     let led = LED.get_or_insert_with(|| {
@@ -134,7 +136,7 @@ unsafe fn TIM2() {
 }
 
 static mut COUNT: u32 = 0;
-static BLINK: Mutex<RefCell<Option<Blink>>> = Mutex::new(RefCell::new(None));
+static BLINK: Mutex<RefCell<Option<PC13<Output<PushPull>>>>> = Mutex::new(RefCell::new(None));
 static DELAY: Mutex<RefCell<Option<CountDownTimer<TIM2>>>> = Mutex::new(RefCell::new(None));
 static TIMER: Mutex<RefCell<Option<CountDownTimer<TIM1>>>> = Mutex::new(RefCell::new(None));
 

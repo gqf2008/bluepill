@@ -9,8 +9,10 @@ use core::time::Duration;
 
 use alloc_cortex_m::CortexMHeap;
 use bluepill::hal::delay::Delay;
+use bluepill::hal::gpio::gpioc::PC13;
+use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
-use bluepill::led::{Blink, Led};
+use bluepill::led::Led;
 use bluepill::sensor::HcSr04;
 use bluepill::serial::BufRead;
 use bluepill::*;
@@ -52,8 +54,7 @@ fn main() -> ! {
     ////////////////初始化设备///////////////////
     let timer = MonoTimer::new(p.core.DWT, p.core.DCB, clocks);
     let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
-    let mut led = Blink::configure(gpioc.pc13, &mut gpioc.crh); //配置LED
-
+    let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh); //配置LED
     let (tx, _) = bluepill::serial::usart1(
         p.device.USART1,
         (gpioa.pa9, gpioa.pa10),

@@ -9,7 +9,11 @@ use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
 use bluepill::*;
+use core::borrow::Borrow;
+use core::cell::RefCell;
 use core::fmt::Write;
+use cortex_m::asm;
+use cortex_m::{asm::wfi, interrupt::Mutex};
 use cortex_m_rt::entry;
 use hal::{
     pac::interrupt,
@@ -18,6 +22,7 @@ use hal::{
     prelude::*,
     serial::{Config, Rx, Tx, *},
 };
+use heapless::spsc::{Consumer, Producer, Queue};
 use heapless::Vec;
 use panic_halt as _;
 
@@ -60,44 +65,63 @@ fn main() -> ! {
     .split();
 
     rx2.listen();
-
-    stdout.write_str("Hello ESP8266\n");
-    cortex_m::interrupt::free(|_| unsafe {
-        STDOUT.replace(stdout);
-        TX2.replace(tx2);
-        RX2.replace(rx2);
+    let mut consumer = unsafe { Q.split().1 };
+    cortex_m::interrupt::free(|cs| {
+        *RX2.borrow(cs).borrow_mut() = Some(rx2);
     });
+
     //开启USART1中断
     bluepill::enable_interrupt(stm32f1xx_hal::pac::Interrupt::USART2);
+
+    stdout.write_str("Hello ESP8266\n");
     loop {
         led.toggle();
-        delay.delay_ms(1_000u32);
+        if let Some(msg) = consumer.dequeue() {
+            match msg {
+                Message::Byte(w) => {
+                    stdout.write(w).ok();
+                }
+                Message::Error(err) => {
+                    stdout.write_fmt(format_args!("error {:?}", err)).ok();
+                }
+            }
+        } else {
+            asm::wfi();
+        }
     }
 }
 
-static mut STDOUT: Option<Tx<USART1>> = None;
-static mut TX2: Option<Tx<USART2>> = None;
-static mut RX2: Option<Rx<USART2>> = None;
-
+static RX2: Mutex<RefCell<Option<Rx<USART2>>>> = Mutex::new(RefCell::new(None));
+static mut Q: Queue<Message, 4096> = Queue::new();
+#[derive(Debug)]
 enum Message {
-    Line(heapless::String<256>),
+    Byte(u8),
+    Error(bluepill::hal::serial::Error),
 }
 #[interrupt]
-fn USART2() {
-    cortex_m::interrupt::free(|_| unsafe {
-        if let Some(rx2) = RX2.as_mut() {
-            match nb::block!(rx2.read()) {
-                Ok(w) => {
-                    if let Some(stdout) = STDOUT.as_mut() {
-                        stdout.write(w).ok();
-                    }
-                }
-                Err(e) => {
-                    if let Some(stdout) = STDOUT.as_mut() {
-                        stdout.write_fmt(format_args!("ERROR {:?}", e));
-                    }
-                }
-            }
-        }
-    })
+unsafe fn USART2() {
+    static mut RX: Option<Rx<USART2>> = None;
+    let mut producer = unsafe { Q.split().0 };
+
+    let rx2 = RX.get_or_insert_with(|| {
+        cortex_m::interrupt::free(|cs| RX2.borrow(cs).replace(None).unwrap())
+    });
+
+    // let queue = QUEUE.get_or_insert_with(|| {
+    //     cortex_m::interrupt::free(|cs| STREAM.borrow(cs).replace(None).unwrap())
+    // });
+    let msg = match nb::block!(rx2.read()) {
+        Ok(w) => Message::Byte(w),
+        Err(e) => Message::Error(e),
+    };
+    producer.enqueue(msg).ok();
+    // cortex_m::interrupt::free(|cs| {
+    //     if let Some(rx2) = RX2.as_mut() {
+    //         let msg = match nb::block!(rx2.read()) {
+    //             Ok(w) => Message::Byte(w),
+    //             Err(e) => Message::Error(e),
+    //         };
+    //         STREAM.borrow(cs).borrow_mut().enqueue(msg).ok();
+    //     }
+    // })
 }

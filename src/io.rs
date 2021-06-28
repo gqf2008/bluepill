@@ -1,44 +1,42 @@
 use core::fmt;
 use cortex_m::interrupt;
 use embedded_hal::serial::{Read, Write};
+use heapless::String;
+use heapless::Vec;
 use nb::block;
 use stm32f1xx_hal::pac::USART1;
 use stm32f1xx_hal::serial::Tx;
 
 static mut STDOUT: Option<SerialWrapper> = None;
-
+// const MAX_BUF_SIZE: usize = 256;
 pub trait BufRead: Read<u8> {
-    // extern crate alloc;
-    // use alloc::string::String;
-    // fn read_line(&mut self) -> core::result::Result<String, Self::Error> {
-    //     extern crate alloc;
-    //     use alloc::string::String;
-    //     use alloc::vec::Vec;
-    //     let mut str = String::new();
-    //     let buf = unsafe { str.as_mut_vec() };
-    //     self.read_until('\n' as u8, buf)?;
-    //     Ok(str)
-    // }
-    // fn read_until(
-    //     &mut self,
-    //     byte: u8,
-    //     buf: &mut Vec<u8>,
-    // ) -> core::result::Result<usize, Self::Error> {
-    //     let mut read = 0;
-    //     loop {
-    //         match nb::block!(self.read()) {
-    //             Ok(b) => {
-    //                 if b == byte {
-    //                     break;
-    //                 }
-    //                 buf.push(b);
-    //                 read += 1;
-    //             }
-    //             Err(err) => return Err(err),
-    //         }
-    //     }
-    //     Ok(read)
-    // }
+    fn read_line<const N: usize>(&mut self) -> core::result::Result<String<N>, Self::Error> {
+        let mut str: String<N> = String::new();
+        let buf = unsafe { str.as_mut_vec() };
+        self.read_until('\n' as u8, buf)?;
+        Ok(str)
+    }
+    fn read_until<const N: usize>(
+        &mut self,
+        byte: u8,
+        buf: &mut Vec<u8, N>,
+    ) -> core::result::Result<usize, Self::Error> {
+        let mut read = 0;
+        loop {
+            match nb::block!(self.read()) {
+                Ok(b) => {
+                    if b == byte {
+                        break;
+                    }
+                    //TODO error check
+                    buf.push(b).ok();
+                    read += 1;
+                }
+                Err(err) => return Err(err),
+            }
+        }
+        Ok(read)
+    }
     fn read_exact(&mut self, buf: &mut [u8]) -> core::result::Result<(), Self::Error> {
         buf.iter_mut()
             .try_for_each(|b| match nb::block!(self.read()) {

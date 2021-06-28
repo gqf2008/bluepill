@@ -1,4 +1,4 @@
-//! 通过串口连接ESP8266模块，发送AT指令联网
+//! 定时器
 //!
 
 #![no_main]
@@ -16,6 +16,7 @@ use bluepill::hal::prelude::*;
 use bluepill::hal::serial::Config;
 use bluepill::hal::timer::CountDownTimer;
 use bluepill::hal::timer::Timer;
+use bluepill::io::*;
 use bluepill::*;
 use core::cell::RefCell;
 use core::ops::MulAssign;
@@ -42,8 +43,8 @@ fn main() -> ! {
     let mut flash = p.device.FLASH.constrain(); //Flash
     let mut rcc = p.device.RCC.constrain(); //RCC
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
-    let clocks = bluepill::clocks::full_clocks(rcc.cfgr, &mut flash.acr); //配置全速时钟
-                                                                          //let mut delay = Delay::new(cp.SYST, clocks); //配置延时器
+    let clocks = rcc.cfgr.full_clocks(&mut flash.acr); //配置全速时钟
+                                                       //let mut delay = Delay::new(cp.SYST, clocks); //配置延时器
     let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
     let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
 

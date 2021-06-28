@@ -1,20 +1,15 @@
-//! 通过串口连接ESP8266模块，发送AT指令联网
-//!
+//! 烟雾传感器
 
 #![no_main]
 #![no_std]
-#![feature(alloc_error_handler)]
 
-extern crate alloc;
-
-use core::fmt::Write;
-
-use alloc_cortex_m::CortexMHeap;
 use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
+use bluepill::io::Stdout;
 use bluepill::sensor::MQ2;
+use bluepill::ClockConfig;
 use bluepill::*;
 use core::cell::RefCell;
 use core::ops::MulAssign;
@@ -36,24 +31,15 @@ use hal::{
     serial::{Config, Rx, Tx, *},
 };
 use heapless::Vec;
-use panic_semihosting as _;
-
-/// 堆内存分配器
-#[global_allocator]
-static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
-/// 堆内存 16K
-const HEAP_SIZE: usize = 16384;
+use panic_halt as _;
 
 #[entry]
 fn main() -> ! {
-    unsafe {
-        ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE);
-    }
     let p = bluepill::Peripherals::take().unwrap(); //核心设备、外围设备
     let mut flash = p.device.FLASH.constrain(); //Flash
     let mut rcc = p.device.RCC.constrain(); //RCC
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
-    let clocks = bluepill::clocks::full_clocks(rcc.cfgr, &mut flash.acr); //配置全速时钟
+    let clocks = rcc.cfgr.full_clocks(&mut flash.acr); //配置全速时钟
     let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
     let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
 
@@ -86,9 +72,9 @@ fn main() -> ! {
     }
 }
 
-// 内存不足执行此处代码(调试用)
-#[alloc_error_handler]
-fn oom(_layout: core::alloc::Layout) -> ! {
-    cortex_m::asm::bkpt();
-    loop {}
-}
+// // 内存不足执行此处代码(调试用)
+// #[alloc_error_handler]
+// fn oom(_layout: core::alloc::Layout) -> ! {
+//     cortex_m::asm::bkpt();
+//     loop {}
+// }

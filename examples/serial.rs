@@ -5,15 +5,13 @@
 #![no_std]
 #![feature(alloc_error_handler)]
 
-extern crate alloc;
-
 use core::fmt::Write;
 
-use alloc_cortex_m::CortexMHeap;
 use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
+use bluepill::io::*;
 use bluepill::*;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::hprintln;
@@ -25,12 +23,7 @@ use hal::{
     serial::{Config, Rx, Tx, *},
 };
 use heapless::Vec;
-use panic_semihosting as _;
-/// 堆内存分配器
-#[global_allocator]
-static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
-/// 堆内存 12K
-const HEAP_SIZE: usize = 1024 * 12;
+use panic_halt as _;
 
 static mut STDIN: Option<Rx<USART1>> = None;
 static mut STDOUT: Option<Tx<USART1>> = None;
@@ -39,14 +32,14 @@ static mut RX2: Option<Rx<USART2>> = None;
 
 #[entry]
 fn main() -> ! {
-    unsafe {
-        ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE);
-    }
+    // unsafe {
+    //     ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE);
+    // }
     let p = bluepill::Peripherals::take().unwrap(); //核心设备、外围设备
     let mut flash = p.device.FLASH.constrain(); //Flash
     let mut rcc = p.device.RCC.constrain(); //RCC
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
-    let clocks = bluepill::clocks::full_clocks(rcc.cfgr, &mut flash.acr); //配置全速时钟
+    let clocks = rcc.cfgr.full_clocks(&mut flash.acr); //配置全速时钟
     let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
     let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
 
@@ -97,12 +90,12 @@ fn main() -> ! {
     }
 }
 
-// 内存不足执行此处代码(调试用)
-#[alloc_error_handler]
-fn oom(_layout: core::alloc::Layout) -> ! {
-    cortex_m::asm::bkpt();
-    loop {}
-}
+// // 内存不足执行此处代码(调试用)
+// #[alloc_error_handler]
+// fn oom(_layout: core::alloc::Layout) -> ! {
+//     cortex_m::asm::bkpt();
+//     loop {}
+// }
 
 #[interrupt]
 fn USART1() {

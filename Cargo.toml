@@ -12,12 +12,9 @@ cortex-m-rt = "0.6.8"
 embedded-dma = "0.1.2"
 bxcan = "0.4.0"
 panic-halt = "0.2.0"
-cortex-m-semihosting = "0.3.3"
-#panic-semihosting = "0.5"
 alloc-cortex-m = "0.4"
 anyhow = { version = "1.0", default-features = false }
 bit_field = "0.10.1"
-fixedvec = "*"
 serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
 serde-json-core = "0.2.0"
 hex = { version = "0.4", default-features = false, features=["alloc"]}

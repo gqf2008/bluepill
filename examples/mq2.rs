@@ -15,7 +15,6 @@ use core::cell::RefCell;
 use core::ops::MulAssign;
 use cortex_m::{asm::wfi, interrupt::Mutex};
 use cortex_m_rt::entry;
-use cortex_m_semihosting::hprintln;
 use embedded_hal::digital::v2::InputPin;
 use hal::gpio::gpioa::PA6;
 use hal::gpio::ExtiPin;

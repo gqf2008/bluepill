@@ -108,14 +108,12 @@ dependencies = [
  "cortex-m 0.6.7",
  "cortex-m-rt",
  "cortex-m-rtic",
- "cortex-m-semihosting",
  "crc16",
  "des",
  "either",
  "embedded-dma",
  "embedded-graphics",
  "embedded-hal",
- "fixedvec",
  "heapless 0.7.1",
  "hex",
  "m",
@@ -407,12 +405,6 @@ dependencies = [
  "nb 0.1.3",
  "void",
 ]
-
-[[package]]
-name = "fixedvec"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b395ef2adf62bdeefcd1b59ad0dd2225c6c333ec79656ea79ac5285c46d051ea"
 
 [[package]]
 name = "float-cmp"

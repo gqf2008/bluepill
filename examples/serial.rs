@@ -14,7 +14,6 @@ use bluepill::hal::prelude::*;
 use bluepill::io::*;
 use bluepill::*;
 use cortex_m_rt::entry;
-use cortex_m_semihosting::hprintln;
 use hal::{
     pac::interrupt,
     pac::Interrupt,

@@ -133,6 +133,7 @@ dependencies = [
  "ssd1306",
  "stm32-usbd",
  "stm32f1xx-hal",
+ "tinybmp",
  "usb-device",
  "usbd-serial",
  "void",
@@ -562,6 +563,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9199148efbf3463493dd58c03a921add4623147739b9acd15f339b1dc5bfd677"
 
 [[package]]
+name = "memchr"
+version = "2.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ee1c47aaa256ecabcaea351eae4a9b01ef39ed810004e298d2511ed284b1525"
+
+[[package]]
 name = "mfrc522"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -591,6 +598,16 @@ name = "nb"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "546c37ac5d9e56f55e73b677106873d9d9f5190605e41a856503623648488cae"
+
+[[package]]
+name = "nom"
+version = "6.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c5c51b9083a3c620fa67a2a635d1ce7d95b897e957d6b28ff9a5da960a103a6"
+dependencies = [
+ "memchr",
+ "version_check",
+]
 
 [[package]]
 name = "num"
@@ -994,6 +1011,16 @@ dependencies = [
  "quote",
  "syn",
  "unicode-xid",
+]
+
+[[package]]
+name = "tinybmp"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f5d16234f376b597906f9e516cb8ed1dd00bf68c459b9723fab24418e2c0967"
+dependencies = [
+ "embedded-graphics",
+ "nom",
 ]
 
 [[package]]

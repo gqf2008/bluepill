@@ -39,10 +39,10 @@ fn main() -> ! {
     let mut colon = true;
     loop {
         if colon {
-            tm1637.write(&[DIGIT[1], DIGIT[2], DIGIT[3], DIGIT[4]], Some(true));
+            tm1637.write(&['1', '2', '3', '4'], Some(true));
             colon = false;
         } else {
-            tm1637.write(&[DIGIT[1], DIGIT[2], DIGIT[3], DIGIT[4]], None);
+            tm1637.write(&['1', '2', '3', '4'], None);
             colon = true;
         }
         delay.delay_ms(500u32);

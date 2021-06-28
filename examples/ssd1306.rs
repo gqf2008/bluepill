@@ -1,6 +1,9 @@
 #![no_std]
 #![no_main]
 
+use bluepill::display::ssd1306::*;
+
+use bluepill::clocks::*;
 use cortex_m_rt::{entry, exception, ExceptionFrame};
 use embedded_graphics::{
     image::{Image, ImageRaw},
@@ -8,7 +11,6 @@ use embedded_graphics::{
     prelude::*,
 };
 use panic_halt as _;
-use ssd1306::{prelude::*, I2CDisplayInterface, Ssd1306};
 use stm32f1xx_hal::{
     i2c::{BlockingI2c, DutyCycle, Mode},
     prelude::*,
@@ -17,22 +19,22 @@ use stm32f1xx_hal::{
 
 #[entry]
 fn main() -> ! {
-    let dp = stm32::Peripherals::take().unwrap();
+    let p = bluepill::Peripherals::take().unwrap();
 
-    let mut flash = dp.FLASH.constrain();
-    let mut rcc = dp.RCC.constrain();
+    let mut flash = p.device.FLASH.constrain();
+    let mut rcc = p.device.RCC.constrain();
 
-    let clocks = rcc.cfgr.freeze(&mut flash.acr);
+    let clocks = rcc.cfgr.clocks(&mut flash.acr);
 
-    let mut afio = dp.AFIO.constrain(&mut rcc.apb2);
+    let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
 
-    let mut gpiob = dp.GPIOB.split(&mut rcc.apb2);
+    let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
 
     let scl = gpiob.pb8.into_alternate_open_drain(&mut gpiob.crh);
     let sda = gpiob.pb9.into_alternate_open_drain(&mut gpiob.crh);
 
     let i2c = BlockingI2c::i2c1(
-        dp.I2C1,
+        p.device.I2C1,
         (scl, sda),
         &mut afio.mapr,
         Mode::Fast {
@@ -47,9 +49,12 @@ fn main() -> ! {
         1000,
     );
 
-    let interface = I2CDisplayInterface::new(i2c);
-    let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
-        .into_buffered_graphics_mode();
+    let mut display = Ssd1306::new(
+        I2CDisplayInterface::new(i2c),
+        DisplaySize128x64,
+        DisplayRotation::Rotate0,
+    )
+    .into_buffered_graphics_mode();
     display.init().unwrap();
     let (w, h) = display.dimensions();
 

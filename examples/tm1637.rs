@@ -1,8 +1,8 @@
 #![no_std]
 #![no_main]
 
+use bluepill::clocks::*;
 use bluepill::hal::delay::Delay;
-use bluepill::hal::pac::Peripherals;
 use bluepill::hal::prelude::*;
 use bluepill::hal::timer::Timer;
 use embedded_hal::blocking::delay::DelayUs;
@@ -18,21 +18,20 @@ impl DelayUs<u16> for NoDelay {
 
 #[entry]
 fn main() -> ! {
-    let dp = Peripherals::take().unwrap();
+    let p = bluepill::Peripherals::take().unwrap();
 
-    let mut rcc = dp.RCC.constrain();
+    let mut rcc = p.device.RCC.constrain();
 
-    let mut gpiob = dp.GPIOB.split(&mut rcc.apb2);
+    let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
 
     let mut clk = gpiob.pb6.into_open_drain_output(&mut gpiob.crl);
     let mut dio = gpiob.pb7.into_open_drain_output(&mut gpiob.crl);
 
-    let mut flash = dp.FLASH.constrain();
-    let clocks = rcc.cfgr.freeze(&mut flash.acr);
-    let cp = cortex_m::Peripherals::take().unwrap();
-    let mut tim = Timer::tim1(dp.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.mhz());
+    let mut flash = p.device.FLASH.constrain();
+    let clocks = rcc.cfgr.clocks(&mut flash.acr);
+    let mut tim = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.mhz());
     let mut tm1637 = TM1637::new(dio, clk, &mut tim);
-    let mut delay = Delay::new(cp.SYST, clocks);
+    let mut delay = Delay::new(p.core.SYST, clocks);
     let mut a = [1, 2, 3, 4];
 
     // // 最高位设置为1时显示 数码管上的":" 符号

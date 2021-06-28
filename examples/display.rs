@@ -1,21 +1,24 @@
 #![no_std]
 #![no_main]
 
-use bluepill::display::ssd1306::*;
-
 use bluepill::clocks::*;
+use bluepill::display::ssd1306::*;
+use bluepill::display::*;
+use bluepill::hal::{
+    delay::Delay,
+    i2c::{BlockingI2c, DutyCycle, Mode},
+    prelude::*,
+    stm32,
+    timer::Timer,
+};
 use cortex_m_rt::{entry, exception, ExceptionFrame};
 use embedded_graphics::{
     image::{Image, ImageRaw},
     pixelcolor::BinaryColor,
     prelude::*,
 };
+use embedded_hal::blocking::delay::DelayUs;
 use panic_halt as _;
-use stm32f1xx_hal::{
-    i2c::{BlockingI2c, DutyCycle, Mode},
-    prelude::*,
-    stm32,
-};
 
 #[entry]
 fn main() -> ! {
@@ -30,6 +33,8 @@ fn main() -> ! {
 
     let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
 
+    let mut clk = gpiob.pb6.into_open_drain_output(&mut gpiob.crl);
+    let mut dio = gpiob.pb7.into_open_drain_output(&mut gpiob.crl);
     let scl = gpiob.pb8.into_alternate_open_drain(&mut gpiob.crh);
     let sda = gpiob.pb9.into_alternate_open_drain(&mut gpiob.crh);
 
@@ -58,6 +63,10 @@ fn main() -> ! {
     display.init().unwrap();
     let (w, h) = display.dimensions();
 
+    let mut tim = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.mhz());
+    let mut tm1637 = TM1637::new(dio, clk, &mut tim);
+    let mut delay = Delay::new(p.core.SYST, clocks);
+
     let raw: ImageRaw<BinaryColor> = ImageRaw::new(include_bytes!("./rust.raw"), 64);
 
     let im = Image::new(&raw, Point::new(32, 0));
@@ -66,7 +75,17 @@ fn main() -> ! {
 
     display.flush().unwrap();
 
-    loop {}
+    let mut colon = true;
+    loop {
+        if colon {
+            tm1637.write(&[DIGIT[1], DIGIT[2], DIGIT[3], DIGIT[4]], Some(true));
+            colon = false;
+        } else {
+            tm1637.write(&[DIGIT[1], DIGIT[2], DIGIT[3], DIGIT[4]], None);
+            colon = true;
+        }
+        delay.delay_ms(500u32);
+    }
 }
 
 #[exception]

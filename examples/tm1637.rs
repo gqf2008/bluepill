@@ -24,11 +24,11 @@ fn main() -> ! {
 
     let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
 
+    let mut flash = p.device.FLASH.constrain();
+    let clocks = rcc.cfgr.clocks(&mut flash.acr);
     let mut clk = gpiob.pb6.into_open_drain_output(&mut gpiob.crl);
     let mut dio = gpiob.pb7.into_open_drain_output(&mut gpiob.crl);
 
-    let mut flash = p.device.FLASH.constrain();
-    let clocks = rcc.cfgr.clocks(&mut flash.acr);
     let mut tim = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.mhz());
     let mut tm1637 = TM1637::new(dio, clk, &mut tim);
     let mut delay = Delay::new(p.core.SYST, clocks);

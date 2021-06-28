@@ -1,90 +1,51 @@
 #![no_std]
 #![no_main]
-#![feature(alloc_error_handler)]
 
-extern crate alloc;
-use alloc_cortex_m::CortexMHeap;
+use bluepill::hal::delay::Delay;
+use bluepill::hal::pac::Peripherals;
+use bluepill::hal::prelude::*;
+use bluepill::hal::timer::Timer;
+use embedded_hal::blocking::delay::DelayUs;
+use panic_halt as _;
+
 use bluepill::display::*;
-use bluepill::hal::{
-    i2c::{BlockingI2c, DutyCycle, Mode},
-    prelude::*,
-    stm32,
-};
-use cortex_m_rt::{entry, exception, ExceptionFrame};
-use embedded_graphics::{
-    image::{Image, ImageRaw},
-    pixelcolor::BinaryColor,
-    prelude::*,
-};
-use panic_semihosting as _;
+use cortex_m_rt::entry;
 
-/// 堆内存分配器
-#[global_allocator]
-static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
-/// 堆内存 16K
-const HEAP_SIZE: usize = 16384;
+struct NoDelay {}
+impl DelayUs<u16> for NoDelay {
+    fn delay_us(&mut self, us: u16) {}
+}
 
 #[entry]
 fn main() -> ! {
-    unsafe {
-        ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE);
-    }
-    let p = bluepill::Peripherals::take().unwrap();
+    let dp = Peripherals::take().unwrap();
 
-    let mut flash = p.device.FLASH.constrain();
-    let mut rcc = p.device.RCC.constrain();
+    let mut rcc = dp.RCC.constrain();
 
+    let mut gpiob = dp.GPIOB.split(&mut rcc.apb2);
+
+    let mut clk = gpiob.pb6.into_open_drain_output(&mut gpiob.crl);
+    let mut dio = gpiob.pb7.into_open_drain_output(&mut gpiob.crl);
+
+    let mut flash = dp.FLASH.constrain();
     let clocks = rcc.cfgr.freeze(&mut flash.acr);
+    let cp = cortex_m::Peripherals::take().unwrap();
+    let mut tim = Timer::tim1(dp.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.mhz());
+    let mut tm1637 = TM1637::new(dio, clk, &mut tim);
+    let mut delay = Delay::new(cp.SYST, clocks);
+    let mut a = [1, 2, 3, 4];
 
-    let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
-
-    let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
-
-    let scl = gpiob.pb10.into_alternate_open_drain(&mut gpiob.crh);
-    let sda = gpiob.pb11.into_alternate_open_drain(&mut gpiob.crh);
-
-    let i2c = BlockingI2c::i2c2(
-        p.device.I2C2,
-        (scl, sda),
-        Mode::Fast {
-            frequency: 400_000.hz(),
-            duty_cycle: DutyCycle::Ratio2to1,
-        },
-        clocks,
-        &mut rcc.apb1,
-        1000,
-        10,
-        1000,
-        1000,
-    );
-
-    // let mut display = Ssd1306::new(
-    //     I2CDisplayInterface::new(i2c),
-    //     DisplaySize128x64,
-    //     DisplayRotation::Rotate0,
-    // )
-    // .into_buffered_graphics_mode();
-    // display.init().unwrap();
-
-    // let raw: ImageRaw<BinaryColor> = ImageRaw::new(include_bytes!("./rust.raw"), 64);
-
-    // let im = Image::new(&raw, Point::new(32, 0));
-
-    // im.draw(&mut display).unwrap();
-
-    // display.flush().unwrap();
-
-    loop {}
-}
-
-#[exception]
-fn HardFault(ef: &ExceptionFrame) -> ! {
-    panic!("{:#?}", ef);
-}
-
-// 内存不足执行此处代码(调试用)
-#[alloc_error_handler]
-fn alloc_error(_layout: core::alloc::Layout) -> ! {
-    cortex_m::asm::bkpt();
-    loop {}
+    // // 最高位设置为1时显示 数码管上的":" 符号
+    // unsigned char disp_num[] = {0x3F, 0x06 | 0x80, 0x5B, 0x4F, 0x66, 0x6D};
+    let mut colon = true;
+    loop {
+        if colon {
+            tm1637.write(&[DIGIT[1], DIGIT[2], DIGIT[3], DIGIT[4]], Some(true));
+            colon = false;
+        } else {
+            tm1637.write(&[DIGIT[1], DIGIT[2], DIGIT[3], DIGIT[4]], None);
+            colon = true;
+        }
+        delay.delay_ms(500u32);
+    }
 }

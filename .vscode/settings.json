@@ -1,7 +1,0 @@
-{
-    "editor.fontSize": 14,
-    "window.zoomLevel": 3,
-    "editor.formatOnSave": true,
-    "rust-analyzer.cargo.target": "thumbv7m-none-eabi",
-    "rust-analyzer.checkOnSave.allTargets": false
-}

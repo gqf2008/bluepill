@@ -1,4 +1,4 @@
-//! ESP8266-01w模块
+//! ESP8266-01S模块
 
 use anyhow::anyhow;
 use anyhow::Result;

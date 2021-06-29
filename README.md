@@ -1,6 +1,6 @@
 # STM32F103C8T6 BLUE PILL
 
-![STM32F103C8T6-BLUEPILL 图标](stm32f103c8t6-large.jpg "STM32F103C8T6-BLUEPILL")
+![BLUEPILL 图标](stm32f103c8t6-large.jpg "BLUEPILL")
 ### ST-LINK V2调试器
 
 | ST-LINK | BLUE PILL |
@@ -58,7 +58,7 @@ cargo run --release --example mq2
 
 cargo run --release --example wifi
 
-![RUNOOB 图标](esp8266-01w.jpg "RUNOOB")
+![ESP8266-01S 图标](esp8266-01w.jpg "ESP8266-01S")
 | ESP8266  | BLUEPILL |
 | -------- | -------- |
 | VCC      | 3.3      |
@@ -79,5 +79,15 @@ cargo run --release --example tm1637
 | VCC    | 3.3       |
 | GND    | GND       |
 | RST    |           |
+
+
+### E-PAPER-7.5INCH-B电子墨水屏
+
+![E-PAPER-7.5INCH-B 图标](e-paper-7.5inch-b.jpg "E-PAPER-7.5INCH-B")
+TODO
+
+| E-PAPER-7.5INCH-B | BLUE PILL |
+| ----------------- | --------- |
+
 
 

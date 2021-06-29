@@ -3,6 +3,7 @@
 #![no_std]
 pub mod clocks;
 pub mod display;
+pub mod flash;
 pub mod gpio;
 pub mod io;
 pub mod led;

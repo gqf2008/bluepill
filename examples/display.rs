@@ -67,6 +67,7 @@ fn main() -> ! {
 
     let mut tim = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.mhz());
     let mut tm1637 = TM1637::new(dio, clk, &mut tim);
+    tm1637.set_brightness(5);
     let mut delay = Delay::new(p.core.SYST, clocks);
     // let bmp = Bmp::from_slice(include_bytes!("./sqb.bmp")).expect("Failed to load BMP image");
 

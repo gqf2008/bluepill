@@ -5,7 +5,8 @@
 #![no_std]
 #![feature(alloc_error_handler)]
 
-use core::fmt::Write;
+#[macro_use(singleton)]
+extern crate cortex_m;
 
 use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
@@ -13,7 +14,7 @@ use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
 use bluepill::io::*;
 use bluepill::*;
-use cortex_m_rt::entry;
+use core::fmt::Write;
 use hal::{
     pac::interrupt,
     pac::Interrupt,
@@ -69,7 +70,6 @@ fn main() -> ! {
         &mut rcc.apb1,
     )
     .split();
-
     stdin.listen();
     rx2.listen();
 
@@ -88,13 +88,6 @@ fn main() -> ! {
         delay.delay_ms(1_000u32);
     }
 }
-
-// // 内存不足执行此处代码(调试用)
-// #[alloc_error_handler]
-// fn oom(_layout: core::alloc::Layout) -> ! {
-//     cortex_m::asm::bkpt();
-//     loop {}
-// }
 
 #[interrupt]
 fn USART1() {

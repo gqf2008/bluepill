@@ -1,4 +1,4 @@
-// pub mod esp826601s;
+pub mod esp826601s;
 pub mod tcp;
 
 pub trait Wifi {

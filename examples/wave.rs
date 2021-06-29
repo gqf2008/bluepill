@@ -51,8 +51,11 @@ fn main() -> ! {
     )
     .split();
     let mut stdout = Stdout(&mut tx);
-    let mut trigger = gpioa.pa0.into_push_pull_output(&mut gpioa.crl); //.into_alternate_push_pull(&mut gpioa.crl);
-    trigger.set_speed(&mut gpioa.crl, IOPinSpeed::Mhz50);
+    let mut trigger = {
+        let mut trigger = gpioa.pa0.into_push_pull_output(&mut gpioa.crl); //.into_alternate_push_pull(&mut gpioa.crl);
+        trigger.set_speed(&mut gpioa.crl, IOPinSpeed::Mhz50);
+        trigger
+    };
     let echo = gpioa.pa1.into_pull_down_input(&mut gpioa.crl); // 下拉输入
     let mut sensor = HcSr04::new((trigger, echo), delay, timer);
     let mut tim = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz());

@@ -3,16 +3,12 @@
 #![no_std]
 pub mod clocks;
 pub mod display;
-pub mod flash;
 pub mod gpio;
 pub mod io;
 pub mod led;
 pub mod net;
 pub mod sensor;
 
-pub use clocks::*;
-pub use led::*;
-pub use net::*;
 pub use stm32f1xx_hal as hal;
 
 pub struct Peripherals {

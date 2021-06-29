@@ -1,22 +1,77 @@
 //! ESP8266-01S模块
 
-use anyhow::anyhow;
-use anyhow::Result;
+use crate::io::{BufRead, Error, Result};
 use core::fmt::Write;
-use cortex_m::singleton;
-
+use heapless::String;
 use nb::block;
-use stm32f1xx_hal::{
-    dma::{dma1::C2, dma1::C3, RxDma, TxDma},
-    gpio::gpiob::*,
-    gpio::*,
-    pac::interrupt,
-    pac::Interrupt,
-    pac::USART1,
-    pac::USART3,
-    prelude::*,
-    serial::{Config, Rx, Serial, Tx},
-};
+
+pub struct Esp8266<T> {
+    port: T,
+}
+
+impl<T> Esp8266<T>
+where
+    T: embedded_hal::serial::Read<u8> + embedded_hal::serial::Write<u8>,
+{
+    pub fn new(port: T) -> Self {
+        Self { port }
+    }
+
+    pub fn ping(&mut self) -> Result<()> {
+        self.write_str("AT\r\n").ok();
+        self.read_line::<4>()?;
+        Ok(())
+    }
+
+    pub fn info(&mut self) -> Result<String<256>> {
+        let buf = String::new();
+        self.write_str("AT+GMR\r\n").ok();
+        self.read_line::<4>()?;
+        Ok(buf)
+    }
+
+    pub fn connect(&mut self) -> Result<()> {
+        todo!()
+    }
+}
+
+impl<T> Write for Esp8266<T>
+where
+    T: embedded_hal::serial::Write<u8>,
+{
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        for byte in s.as_bytes() {
+            if *byte == b'\n' {
+                let res = block!(self.port.write(b'\r'));
+                if res.is_err() {
+                    return Err(core::fmt::Error);
+                }
+            }
+
+            let res = block!(self.port.write(*byte));
+
+            if res.is_err() {
+                return Err(core::fmt::Error);
+            }
+        }
+        Ok(())
+    }
+}
+impl<T> BufRead for Esp8266<T> where T: embedded_hal::serial::Read<u8> {}
+
+impl<T> embedded_hal::serial::Read<u8> for Esp8266<T>
+where
+    T: embedded_hal::serial::Read<u8>,
+{
+    type Error = Error;
+    fn read(&mut self) -> nb::Result<u8, Self::Error> {
+        match self.port.read() {
+            Ok(b) => Ok(b),
+            Err(err) => return Err(nb::Error::Other(Error::ReadError)),
+        }
+    }
+}
+
 //AT+CWJAP_DEF="ssid","paasword" 连接WIFI
 //AT+CIPSTAMAC_CUR? 查MAC地址
 //AT+CWAUTOCONN=1 上电自动连接WIFI

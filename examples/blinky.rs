@@ -1,11 +1,12 @@
 #![no_main]
 #![no_std]
 
+use bluepill::clocks::*;
 use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
-use bluepill::*;
+use bluepill::led::*;
 use cortex_m_rt::entry;
 use embedded_hal::blocking::delay::{DelayMs, DelayUs};
 use panic_semihosting as _;

@@ -4,10 +4,13 @@
 #![no_main]
 #![no_std]
 
+use bluepill::clocks::*;
 use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
+use bluepill::led::*;
+
 use bluepill::*;
 use core::borrow::Borrow;
 use core::cell::RefCell;

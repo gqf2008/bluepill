@@ -1,24 +1,9 @@
 //!超声波测距传感器
 
 use crate::hal::time::MonoTimer;
+use crate::io::{Error, Result};
 use embedded_hal::blocking::delay::DelayUs;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
-
-#[derive(Debug)]
-pub enum Error {
-    Timeout,
-}
-
-impl core::fmt::Display for Error {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        match *self {
-            Error::Timeout => write!(f, "Timeout waiting for sensor"),
-        }
-    }
-}
-
-type Result<T> = core::result::Result<T, Error>;
-
 #[derive(Debug, Copy, Clone)]
 pub struct Distance(f64);
 

@@ -3,13 +3,14 @@
 #![no_main]
 #![no_std]
 
+use bluepill::clocks::*;
 use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
 use bluepill::io::Stdout;
+use bluepill::led::*;
 use bluepill::sensor::MQ2;
-use bluepill::ClockConfig;
 use bluepill::*;
 use core::cell::RefCell;
 use core::fmt::Write;

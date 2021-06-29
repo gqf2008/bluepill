@@ -4,11 +4,13 @@
 #[macro_use(singleton)]
 extern crate cortex_m;
 
+use bluepill::clocks::*;
 use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
 use bluepill::io::*;
+use bluepill::led::*;
 use bluepill::*;
 use core::fmt::Write;
 use cortex_m_rt::entry;

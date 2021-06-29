@@ -17,7 +17,6 @@ use bluepill::hal::{
 use bluepill::io::Stdout;
 use bluepill::led::*;
 use bluepill::sensor::HcSr04;
-use bluepill::sprintln;
 use core::fmt::Write;
 use core::time::Duration;
 use cortex_m_rt::entry;
@@ -51,18 +50,18 @@ fn main() -> ! {
         &mut rcc.apb2,
     )
     .split();
-    tx.to_stdout();
+    let mut stdout = Stdout(&mut tx);
     let mut trigger = gpioa.pa0.into_push_pull_output(&mut gpioa.crl); //.into_alternate_push_pull(&mut gpioa.crl);
     trigger.set_speed(&mut gpioa.crl, IOPinSpeed::Mhz50);
     let echo = gpioa.pa1.into_pull_down_input(&mut gpioa.crl); // 下拉输入
     let mut sensor = HcSr04::new((trigger, echo), delay, timer);
     let mut tim = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz());
 
-    sprintln!("超声波测距");
+    writeln!(stdout, "超声波测距");
     loop {
         led.toggle();
         let distance = sensor.measure().unwrap();
-        sprintln!("距离:{}毫米", distance.mm());
+        writeln!(stdout, "距离:{}毫米", distance.mm());
         nb::block!(tim.wait()).ok();
     }
 }

@@ -1,9 +1,7 @@
 //! 通过串口连接ESP8266模块，发送AT指令联网
-//!
 
 #![no_main]
 #![no_std]
-#![feature(alloc_error_handler)]
 
 #[macro_use(singleton)]
 extern crate cortex_m;
@@ -15,6 +13,7 @@ use bluepill::hal::prelude::*;
 use bluepill::io::*;
 use bluepill::*;
 use core::fmt::Write;
+use cortex_m_rt::entry;
 use hal::{
     pac::interrupt,
     pac::Interrupt,
@@ -32,9 +31,6 @@ static mut RX2: Option<Rx<USART2>> = None;
 
 #[entry]
 fn main() -> ! {
-    // unsafe {
-    //     ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE);
-    // }
     let p = bluepill::Peripherals::take().unwrap(); //核心设备、外围设备
     let mut flash = p.device.FLASH.constrain(); //Flash
     let mut rcc = p.device.RCC.constrain(); //RCC

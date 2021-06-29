@@ -37,13 +37,11 @@ impl Peripherals {
 }
 
 pub fn enable_interrupt(interrupt: hal::pac::Interrupt) {
-    sprintln!("打开{:?}中断", interrupt);
     unsafe {
         cortex_m::peripheral::NVIC::unmask(interrupt);
     }
 }
 
 pub fn disable_interrupt(interrupt: hal::pac::Interrupt) {
-    sprintln!("关闭{:?}中断", interrupt);
     cortex_m::peripheral::NVIC::mask(interrupt);
 }

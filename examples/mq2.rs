@@ -12,6 +12,7 @@ use bluepill::sensor::MQ2;
 use bluepill::ClockConfig;
 use bluepill::*;
 use core::cell::RefCell;
+use core::fmt::Write;
 use core::ops::MulAssign;
 use cortex_m::{asm::wfi, interrupt::Mutex};
 use cortex_m_rt::entry;
@@ -58,15 +59,13 @@ fn main() -> ! {
         &mut rcc.apb2,
     )
     .split();
-    stdout.to_stdout();
-    //bluepill::stdout(stdout);
+    let mut stdout = Stdout(&mut stdout);
 
     let mq2 = MQ2::new(gpioa.pa6.into_pull_down_input(&mut gpioa.crl));
-    sprintln!("烟雾传感器");
     loop {
         led.toggle();
         nb::block!(mq2.wait()).ok();
-        sprintln!("Alart!");
+        writeln!(stdout, "Alart!");
         delay.delay_ms(1000u32);
     }
 }

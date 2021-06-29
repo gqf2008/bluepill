@@ -8,6 +8,7 @@
 extern crate alloc;
 
 use alloc_cortex_m::CortexMHeap;
+use bluepill::clocks::ClockConfig;
 use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
@@ -16,10 +17,10 @@ use bluepill::hal::prelude::*;
 use bluepill::hal::serial::Config;
 use bluepill::hal::timer::CountDownTimer;
 use bluepill::hal::timer::Timer;
-use bluepill::io::*;
-use bluepill::*;
+use bluepill::io::Stdout;
+use bluepill::led::*;
 use core::cell::RefCell;
-use core::ops::MulAssign;
+use core::fmt::Write;
 use cortex_m::{asm::wfi, interrupt::Mutex};
 use cortex_m_rt::entry;
 use embedded_hal::timer::Cancel;
@@ -62,7 +63,8 @@ fn main() -> ! {
         &mut rcc.apb2,
     )
     .split();
-    tx.to_stdout();
+
+    let mut stdout = Stdout(&mut tx);
 
     let mut led = gpioc.pc13.to_led(&mut gpioc.crh); //配置LED
     let mut timer = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz());
@@ -81,9 +83,9 @@ fn main() -> ! {
     bluepill::enable_interrupt(Interrupt::TIM1_UP);
     bluepill::enable_interrupt(Interrupt::TIM2);
 
-    sprintln!("hello timer led");
+    writeln!(stdout, "hello timer led");
     loop {
-        sprintln!("listen timer");
+        writeln!(stdout, "listen timer");
         cortex_m::interrupt::free(|cs| {
             // Move TIMER pin here, leaving a None in its place
             TIMER
@@ -94,7 +96,7 @@ fn main() -> ! {
                 .listen(Event::Update);
         });
         delay1.delay_ms(5000u32);
-        sprintln!("unlisten timer");
+        writeln!(stdout, "unlisten timer");
         cortex_m::interrupt::free(|cs| {
             // Move TIMER pin here, leaving a None in its place
             TIMER
@@ -156,7 +158,7 @@ unsafe fn TIM1_UP() {
     cortex_m::interrupt::free(|_| unsafe {
         COUNT += 10;
     });
-    sprintln!("COUNT {}", unsafe { COUNT });
+
     unsafe { COUNT = 0 };
     //tim.wait().ok();
     cortex_m::interrupt::free(|cs| {

@@ -22,7 +22,6 @@ fn main() -> ! {
     let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
     let mut led = gpioc.pc13.to_led(&mut gpioc.crh); //配置LED
                                                      //esp8266::init();
-    sprintln!("hello bluepill led");
 
     loop {
         led.toggle();

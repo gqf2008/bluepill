@@ -1,7 +1,6 @@
 //!超声波测距传感器
 
 use crate::hal::time::MonoTimer;
-use crate::sprintln;
 use embedded_hal::blocking::delay::DelayUs;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 

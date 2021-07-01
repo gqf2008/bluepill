@@ -14,9 +14,11 @@ use bluepill::hal::{
 use cortex_m_rt::{entry, exception, ExceptionFrame};
 use embedded_graphics::{
     image::{Image, ImageRaw},
+    mono_font::{ascii::FONT_10X20, MonoTextStyle},
     pixelcolor::BinaryColor,
     pixelcolor::Rgb565,
     prelude::*,
+    text::{Alignment, Text},
 };
 use embedded_hal::blocking::delay::DelayUs;
 use panic_halt as _;
@@ -80,11 +82,16 @@ fn main() -> ! {
     // im.draw(&mut display.color_converted()).unwrap();
 
     // display.flush().unwrap();
-    let raw: ImageRaw<BinaryColor> = ImageRaw::new(include_bytes!("./sqb.raw"), 128);
+    let raw: ImageRaw<BinaryColor> = ImageRaw::new(include_bytes!("./sqb.raw"), 120);
 
-    let im = Image::new(&raw, Point::new(0, 0));
-
-    im.draw(&mut display).unwrap();
+    Image::new(&raw, Point::new(4, 1))
+        .draw(&mut display)
+        .unwrap();
+    display.flush().unwrap();
+    let style = MonoTextStyle::new(&FONT_10X20, BinaryColor::On);
+    Text::with_alignment("100", Point::new(20, 60), style, Alignment::Center)
+        .draw(&mut display)
+        .unwrap();
 
     display.flush().unwrap();
 

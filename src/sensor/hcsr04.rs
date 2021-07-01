@@ -23,16 +23,14 @@ pub struct HcSr04<Triger, Echo, Delay> {
     timer: MonoTimer,
 }
 
-impl<Triger, Echo, Delay> HcSr04<Triger, Echo, Delay>
+impl<Trig, Echo, Delay> HcSr04<Trig, Echo, Delay>
 where
-    Triger: OutputPin,
+    Trig: OutputPin,
     Echo: InputPin,
     Delay: DelayUs<u32>,
 {
-    pub fn new(pin: (Triger, Echo), delay: Delay, timer: MonoTimer) -> Self {
-        let mut trig = pin.0;
+    pub fn new(mut trig: Trig, echo: Echo, delay: Delay, timer: MonoTimer) -> Self {
         trig.set_low().ok();
-        let echo = pin.1;
         HcSr04 {
             trig,
             echo,
@@ -42,12 +40,14 @@ where
     }
 
     pub fn measure(&mut self) -> Result<Distance> {
-        let mut sum = 0f64;
-        (0..5).into_iter().for_each(|_| {
-            sum += self.measure1().unwrap();
-            self.delay.delay_us(60000u32);
-        });
-        Ok(Distance(sum / 5.0))
+        //let mut sum = 0f64;
+        // (0..1).into_iter().for_each(|_| {
+        //     sum += self.measure1().unwrap();
+        //     self.delay.delay_us(60000u32);
+        // });
+        self.delay.delay_us(60000u32);
+        let sum = self.measure1().unwrap();
+        Ok(Distance(sum))
     }
 
     fn measure1(&mut self) -> Result<f64> {

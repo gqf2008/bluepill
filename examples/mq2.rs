@@ -4,6 +4,7 @@
 #![no_std]
 
 use bluepill::clocks::*;
+use bluepill::display::*;
 use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
@@ -30,6 +31,7 @@ use hal::{
     pac::{USART1, USART2},
     prelude::*,
     serial::{Config, Rx, Tx, *},
+    timer::Timer,
 };
 use heapless::Vec;
 use panic_halt as _;
@@ -42,32 +44,32 @@ fn main() -> ! {
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
     let clocks = rcc.cfgr.full_clocks(&mut flash.acr); //配置全速时钟
     let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
-    let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
+    let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
+    //let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
 
     ////////////////初始化设备///////////////////
+    let clk = gpiob.pb6.into_open_drain_output(&mut gpiob.crl);
+    let dio = gpiob.pb7.into_open_drain_output(&mut gpiob.crl);
     let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
-    let mut led = gpioc.pc13.to_led(&mut gpioc.crh); //配置LED
-
-    let (mut stdout, _) = bluepill::hal::serial::Serial::usart1(
-        p.device.USART1,
-        (
-            gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh),
-            gpioa.pa10,
-        ),
-        &mut afio.mapr,
-        Config::default().baudrate(115200.bps()),
-        clocks,
-        &mut rcc.apb2,
-    )
-    .split();
-    let mut stdout = Stdout(&mut stdout);
-
+    let mut tim = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.mhz());
+    let mut tm1637 = TM1637::new(dio, clk, &mut tim);
+    tm1637.set_brightness(5);
+    tm1637.write(&['-', '-', '-', '-'], Some(true));
     let mq2 = MQ2::new(gpioa.pa6.into_pull_down_input(&mut gpioa.crl));
+    let mut colon = true;
     loop {
-        led.toggle();
         nb::block!(mq2.wait()).ok();
-        writeln!(stdout, "Alart!");
-        delay.delay_ms(1000u32);
+        (0..10).into_iter().for_each(|_| {
+            if colon {
+                tm1637.write(&['E', 'E', 'E', 'E'], Some(true));
+                colon = false;
+            } else {
+                tm1637.write(&['E', 'E', 'E', 'E'], None);
+                colon = true;
+            }
+            delay.delay_ms(100u32);
+        });
+        delay.delay_ms(5000u32);
     }
 }
 

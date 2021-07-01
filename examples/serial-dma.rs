@@ -76,22 +76,7 @@ fn read_dma1(stdout: &mut Tx<USART1>, rx: RxDma<Rx<USART1>, C5>) -> ! {
     let mut s: heapless::String<4096> = heapless::String::new();
     loop {
         let t = rx.read(buf);
-        while !t.is_done() {
-            // let out = t.peek();
-            // out.iter().for_each(|b| {
-            //     let c = *b as char;
-            //     if c == '\n' {
-            //         stdout.write_fmt(format_args!("{}", s));
-            //         s.clear();
-            //     } else {
-            //         if s.len() == 4096 {
-            //             stdout.write_fmt(format_args!("{}", s));
-            //             s.clear();
-            //         }
-            //         s.push(c).ok();
-            //     }
-            // });
-        }
+        while !t.is_done() {}
         let (out, _rx) = t.wait();
         out.iter().for_each(|b| {
             let c = *b as char;

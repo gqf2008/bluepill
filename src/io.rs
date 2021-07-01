@@ -11,6 +11,7 @@ pub enum Error {
     EOF,
     WriteError,
     ReadError,
+    Other(u8),
 }
 
 impl core::fmt::Display for Error {
@@ -20,6 +21,7 @@ impl core::fmt::Display for Error {
             Error::EOF => write!(f, "end of file"),
             Error::WriteError => write!(f, "write error"),
             Error::ReadError => write!(f, "read error"),
+            Error::Other(code) => write!(f, "error {}", code),
         }
     }
 }

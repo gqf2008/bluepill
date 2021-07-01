@@ -40,7 +40,7 @@ cargo run --release --example wave
 | ------- | --------- |
 | Vcc     | 5V        |
 | Trig    | A0        |
-| Echo    | A4        |
+| Echo    | A1        |
 | GND     | GND       |
 
 ### MQ2烟雾传感器

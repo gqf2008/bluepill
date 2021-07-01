@@ -1,4 +1,5 @@
 use core::fmt::Write;
+use embedded_hal::timer::CountDown;
 use heapless::String;
 use heapless::Vec;
 use nb::block;
@@ -12,6 +13,7 @@ pub enum Error {
     WriteError,
     ReadError,
     Other(u8),
+    BufferFull,
 }
 
 impl core::fmt::Display for Error {
@@ -22,19 +24,74 @@ impl core::fmt::Display for Error {
             Error::WriteError => write!(f, "write error"),
             Error::ReadError => write!(f, "read error"),
             Error::Other(code) => write!(f, "error {}", code),
+            Error::BufferFull => write!(f, "buffer full"),
         }
     }
 }
 
-pub trait Timeout: embedded_hal::serial::Read<u8> {
-    fn read_timeout(&mut self, ms: u32) -> Result<u8> {
+pub struct TimeoutReader<'a, R, TIM>(pub &'a mut R, pub &'a mut TIM);
+
+impl<'a, R, TIM> TimeoutReader<'a, R, TIM>
+where
+    R: embedded_hal::serial::Read<u8>,
+    TIM: CountDown,
+{
+    pub fn read_line<const N: usize>(&mut self, timeout: TIM::Time) -> Result<String<N>> {
+        let mut str: String<N> = String::new();
+        let buf = unsafe { str.as_mut_vec() };
+        self.read_until('\n' as u8, buf, timeout)?;
+        Ok(str)
+    }
+
+    pub fn read_until<const N: usize>(
+        &mut self,
+        byte: u8,
+        buf: &mut Vec<u8, N>,
+        timeout: TIM::Time,
+    ) -> Result<usize> {
+        let mut read = 0;
+        self.1.start(timeout);
         loop {
-            match self.read() {
-                Ok(b) => return Ok(b),
+            match self.0.read() {
+                Err(nb::Error::Other(_e)) => return Err(Error::ReadError),
                 Err(nb::Error::WouldBlock) => {}
-                Err(nb::Error::Other(_)) => return Err(Error::ReadError),
+                Ok(b) => {
+                    read += 1;
+                    if let Err(_e) = buf.push(b) {
+                        return Err(Error::BufferFull);
+                    }
+                    if byte == b {
+                        break;
+                    }
+                }
+            }
+            match self.1.wait() {
+                Err(nb::Error::Other(_e)) => {
+                    unreachable!()
+                }
+                Err(nb::Error::WouldBlock) => continue,
+                Ok(()) => return Err(Error::Timeout),
             }
         }
+        Ok(read)
+    }
+
+    pub fn read_exact(&mut self, buf: &mut [u8], timeout: TIM::Time) -> Result<()> {
+        self.1.start(timeout);
+        buf.iter_mut().try_for_each(|b| loop {
+            match self.0.read() {
+                Ok(r) => *b = r,
+                Err(nb::Error::WouldBlock) => {}
+                Err(_err) => return Err(Error::ReadError),
+            }
+            match self.1.wait() {
+                Err(nb::Error::Other(_e)) => {
+                    unreachable!()
+                }
+                Err(nb::Error::WouldBlock) => continue,
+                Ok(()) => return Err(Error::Timeout),
+            }
+        })
     }
 }
 
@@ -45,6 +102,7 @@ pub trait BufRead: embedded_hal::serial::Read<u8> {
         self.read_until('\n' as u8, buf)?;
         Ok(str)
     }
+
     fn read_until<const N: usize>(&mut self, byte: u8, buf: &mut Vec<u8, N>) -> Result<usize> {
         let mut read = 0;
         loop {
@@ -59,8 +117,10 @@ pub trait BufRead: embedded_hal::serial::Read<u8> {
                 Err(_err) => return Err(Error::ReadError),
             }
         }
+
         Ok(read)
     }
+
     fn read_exact(&mut self, buf: &mut [u8]) -> Result<()> {
         buf.iter_mut()
             .try_for_each(|b| match nb::block!(self.read()) {
@@ -73,8 +133,9 @@ pub trait BufRead: embedded_hal::serial::Read<u8> {
     }
 }
 
-impl<'p, T> BufRead for Stdin<'p, T> where T: embedded_hal::serial::Read<u8> {}
 pub struct Stdin<'p, T>(pub &'p mut T);
+
+impl<'p, T> BufRead for Stdin<'p, T> where T: embedded_hal::serial::Read<u8> {}
 
 impl<'p, T> embedded_hal::serial::Read<u8> for Stdin<'p, T>
 where
@@ -92,7 +153,7 @@ pub struct Stdout<'p, T>(pub &'p mut T);
 
 impl<'p, T> Write for Stdout<'p, T>
 where
-    T: embedded_hal::serial::Write<u8>,
+    T: embedded_hal::serial::Write<u8, Error = ::core::convert::Infallible>,
 {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         for byte in s.as_bytes() {

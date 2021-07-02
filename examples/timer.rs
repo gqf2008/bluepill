@@ -8,7 +8,7 @@
 extern crate alloc;
 
 use alloc_cortex_m::CortexMHeap;
-use bluepill::clocks::ClockConfig;
+use bluepill::clocks::ClockExt;
 use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
@@ -44,8 +44,8 @@ fn main() -> ! {
     let mut flash = p.device.FLASH.constrain(); //Flash
     let mut rcc = p.device.RCC.constrain(); //RCC
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
-    let clocks = rcc.cfgr.full_clocks(&mut flash.acr); //配置全速时钟
-                                                       //let mut delay = Delay::new(cp.SYST, clocks); //配置延时器
+    let clocks = rcc.cfgr.clocks_72mhz(&mut flash.acr); //配置全速时钟
+                                                        //let mut delay = Delay::new(cp.SYST, clocks); //配置延时器
     let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
     let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
 
@@ -66,11 +66,9 @@ fn main() -> ! {
 
     let mut stdout = Stdout(&mut tx);
 
-    let mut led = gpioc.pc13.to_led(&mut gpioc.crh); //配置LED
+    let mut led = Led(gpioc.pc13).ppo(&mut gpioc.crh); //配置LED
     let mut timer = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz());
     let mut delay = Timer::tim2(p.device.TIM2, &clocks, &mut rcc.apb1).start_count_down(1.hz());
-    //delay.start(3000.ms());
-    //let mut timer = Timer::syst(cp.SYST, &clocks).start_count_down(1.hz());
     timer.listen(Event::Update);
     delay.listen(Event::Update);
 
@@ -120,7 +118,7 @@ fn alloc_error(_layout: core::alloc::Layout) -> ! {
 
 #[interrupt]
 unsafe fn TIM2() {
-    static mut LED: Option<PC13<Output<PushPull>>> = None;
+    static mut LED: Option<Led<PC13<Output<PushPull>>>> = None;
     static mut TIM: Option<CountDownTimer<TIM2>> = None;
 
     let led = LED.get_or_insert_with(|| {
@@ -142,7 +140,7 @@ unsafe fn TIM2() {
 }
 
 static mut COUNT: u32 = 0;
-static BLINK: Mutex<RefCell<Option<PC13<Output<PushPull>>>>> = Mutex::new(RefCell::new(None));
+static BLINK: Mutex<RefCell<Option<Led<PC13<Output<PushPull>>>>>> = Mutex::new(RefCell::new(None));
 static DELAY: Mutex<RefCell<Option<CountDownTimer<TIM2>>>> = Mutex::new(RefCell::new(None));
 static TIMER: Mutex<RefCell<Option<CountDownTimer<TIM1>>>> = Mutex::new(RefCell::new(None));
 

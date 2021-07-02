@@ -1,8 +1,14 @@
+use crate::hal::serial::Error as SerialError;
+
+extern crate alloc;
+use alloc::format;
 use core::fmt::Write;
 use embedded_hal::timer::CountDown;
 use heapless::String;
 use heapless::Vec;
 use nb::block;
+use stm32f1xx_hal::pac::USART1;
+use stm32f1xx_hal::serial::Tx;
 
 pub type Result<T> = core::result::Result<T, crate::io::Error>;
 
@@ -36,10 +42,14 @@ where
     R: embedded_hal::serial::Read<u8>,
     TIM: CountDown,
 {
-    pub fn read_line<const N: usize>(&mut self, timeout: TIM::Time) -> Result<String<N>> {
+    pub fn read_line<const N: usize>(
+        &mut self,
+        timeout: TIM::Time,
+        tx: &mut Tx<USART1>,
+    ) -> Result<String<N>> {
         let mut str: String<N> = String::new();
         let buf = unsafe { str.as_mut_vec() };
-        self.read_until('\n' as u8, buf, timeout)?;
+        self.read_until('\n' as u8, buf, timeout, tx)?;
         Ok(str)
     }
 
@@ -48,13 +58,17 @@ where
         byte: u8,
         buf: &mut Vec<u8, N>,
         timeout: TIM::Time,
+        tx: &mut Tx<USART1>,
     ) -> Result<usize> {
         let mut read = 0;
         self.1.start(timeout);
         loop {
             match self.0.read() {
-                Err(nb::Error::Other(_e)) => return Err(Error::ReadError),
                 Err(nb::Error::WouldBlock) => {}
+                Err(nb::Error::Other(<R as SerialError>::Framing)) => {
+                    tx.write_str(format!("{:#?}",).as_str()).ok();
+                    return Err(Error::ReadError);
+                }
                 Ok(b) => {
                     read += 1;
                     if let Err(_e) = buf.push(b) {
@@ -69,7 +83,7 @@ where
                 Err(nb::Error::Other(_e)) => {
                     unreachable!()
                 }
-                Err(nb::Error::WouldBlock) => continue,
+                Err(nb::Error::WouldBlock) => {}
                 Ok(()) => return Err(Error::Timeout),
             }
         }
@@ -82,7 +96,7 @@ where
             match self.0.read() {
                 Ok(r) => *b = r,
                 Err(nb::Error::WouldBlock) => {}
-                Err(_err) => return Err(Error::ReadError),
+                Err(err) => return Err(Error::ReadError),
             }
             match self.1.wait() {
                 Err(nb::Error::Other(_e)) => {
@@ -114,7 +128,7 @@ pub trait BufRead: embedded_hal::serial::Read<u8> {
                     buf.push(b).ok();
                     read += 1;
                 }
-                Err(_err) => return Err(Error::ReadError),
+                Err(err) => return Err(Error::ReadError),
             }
         }
 
@@ -128,7 +142,7 @@ pub trait BufRead: embedded_hal::serial::Read<u8> {
                     *b = r;
                     Ok(())
                 }
-                Err(_err) => return Err(Error::ReadError),
+                Err(err) => return Err(Error::ReadError),
             })
     }
 }
@@ -145,10 +159,11 @@ where
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
         match self.0.read() {
             Ok(b) => Ok(b),
-            Err(_err) => return Err(nb::Error::Other(Error::ReadError)),
+            Err(err) => return Err(nb::Error::Other(Error::ReadError)),
         }
     }
 }
+
 pub struct Stdout<'p, T>(pub &'p mut T);
 
 impl<'p, T> Write for Stdout<'p, T>

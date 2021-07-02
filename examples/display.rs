@@ -27,16 +27,11 @@ use tinybmp::Bmp;
 #[entry]
 fn main() -> ! {
     let p = bluepill::Peripherals::take().unwrap();
-
     let mut flash = p.device.FLASH.constrain();
     let mut rcc = p.device.RCC.constrain();
-
-    let clocks = rcc.cfgr.clocks(&mut flash.acr);
-
+    let clocks = rcc.cfgr.clocks_48mhz(&mut flash.acr);
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
-
     let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
-
     let clk = gpiob.pb6.into_open_drain_output(&mut gpiob.crl);
     let dio = gpiob.pb7.into_open_drain_output(&mut gpiob.crl);
     let scl = gpiob.pb8.into_alternate_open_drain(&mut gpiob.crh);

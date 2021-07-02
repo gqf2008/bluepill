@@ -10,7 +10,7 @@ use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
 use bluepill::io::*;
-use bluepill::led::*;
+use bluepill::led::Led;
 use bluepill::*;
 use core::fmt::Write;
 use cortex_m_rt::entry;
@@ -35,12 +35,12 @@ fn main() -> ! {
     let mut flash = p.device.FLASH.constrain(); //Flash
     let mut rcc = p.device.RCC.constrain(); //RCC
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
-    let clocks = rcc.cfgr.full_clocks(&mut flash.acr); //配置全速时钟
+    let clocks = rcc.cfgr.clocks_72mhz(&mut flash.acr); //配置全速时钟
     let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
     let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
 
     let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
-    let mut led = gpioc.pc13.to_led(&mut gpioc.crh); //配置LED
+    let mut led = Led(gpioc.pc13).ppo(&mut gpioc.crh); //配置LED
 
     let (mut stdout, mut stdin) = bluepill::hal::serial::Serial::usart1(
         p.device.USART1,

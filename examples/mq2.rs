@@ -19,18 +19,17 @@ use core::ops::MulAssign;
 use cortex_m::{asm::wfi, interrupt::Mutex};
 use cortex_m_rt::entry;
 use embedded_hal::digital::v2::InputPin;
-use hal::gpio::gpioa::PA6;
-use hal::gpio::ExtiPin;
-use hal::gpio::PullDown;
 use hal::{
+    gpio::gpioa::PA6,
+    gpio::ExtiPin,
     gpio::IOPinSpeed,
     gpio::Input,
     gpio::OutputSpeed,
+    gpio::PullDown,
     pac::interrupt,
     pac::Interrupt,
     pac::{USART1, USART2},
     prelude::*,
-    serial::{Config, Rx, Tx, *},
     timer::Timer,
 };
 use heapless::Vec;
@@ -42,13 +41,13 @@ fn main() -> ! {
     let mut flash = p.device.FLASH.constrain(); //Flash
     let mut rcc = p.device.RCC.constrain(); //RCC
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
-    let clocks = rcc.cfgr.full_clocks(&mut flash.acr); //配置全速时钟
+    let clocks = rcc.cfgr.clocks_72mhz(&mut flash.acr); //配置全速时钟
     let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
     let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
     //let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
 
     ////////////////初始化设备///////////////////
-    let clk = gpiob.pb6.into_open_drain_output(&mut gpiob.crl);
+    let clk = gpiob.pb6.into_open_drain_output(&mut gpiob.crl); //开漏输出
     let dio = gpiob.pb7.into_open_drain_output(&mut gpiob.crl);
     let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
     let mut tim = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.mhz());
@@ -72,10 +71,3 @@ fn main() -> ! {
         delay.delay_ms(5000u32);
     }
 }
-
-// // 内存不足执行此处代码(调试用)
-// #[alloc_error_handler]
-// fn oom(_layout: core::alloc::Layout) -> ! {
-//     cortex_m::asm::bkpt();
-//     loop {}
-// }

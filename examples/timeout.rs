@@ -3,19 +3,19 @@
 #![feature(alloc_error_handler)]
 
 extern crate alloc;
-#[macro_use(singleton)]
-extern crate cortex_m;
-use bluepill::clocks::*;
-use bluepill::hal::delay::Delay;
-use bluepill::hal::dma::{CircReadDma, Half, RxDma};
-use bluepill::hal::gpio::gpioc::PC13;
-use bluepill::hal::gpio::{Output, PushPull};
+
+use bluepill::clocks::ClockExt;
 use bluepill::hal::{
+    delay::Delay,
+    dma::dma1::C5,
+    gpio::gpioc::PC13,
+    gpio::{Output, PushPull},
     pac::interrupt,
     pac::Interrupt,
+    pac::TIM1,
     pac::{USART1, USART2},
     prelude::*,
-    serial::{Config, Rx, Serial, Tx},
+    time::MilliSeconds,
 };
 use bluepill::io::TimeoutReader;
 use bluepill::led::*;
@@ -23,14 +23,6 @@ use core::borrow::Borrow;
 use core::cell::RefCell;
 use core::fmt::Write;
 use cortex_m::asm;
-use stm32f1xx_hal::time::MilliSeconds;
-// use embedded_time::{
-//     duration::{Duration, Milliseconds},
-//     rate::*,
-// };
-
-use stm32f1xx_hal::dma::dma1::C5;
-use stm32f1xx_hal::pac::TIM1;
 
 use alloc::format;
 use alloc::string::ToString;
@@ -60,50 +52,41 @@ fn main() -> ! {
 
     let mut rcc = p.device.RCC.constrain(); //RCC
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
-    let clocks = rcc.cfgr.full_clocks(&mut flash.acr); //配置全速时钟
+    let clocks = rcc.cfgr.clocks_72mhz(&mut flash.acr); //配置全速时钟
 
-    let channels = p.device.DMA1.split(&mut rcc.ahb);
     let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
     let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
 
     //let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
-    let mut led = gpioc.pc13.to_led(&mut gpioc.crh); //配置LED
+    //let mut led = Led(gpioc.pc13).ppo(&mut gpioc.crh); //配置LED
+    let (mut stdout, _) = bluepill::serial::Serial::with_usart(p.device.USART1)
+        .pins(gpioa.pa9, gpioa.pa10) //映射到引脚
+        .cr(&mut gpioa.crh) //配置GPIO控制寄存器
+        .clocks(clocks) //时钟
+        .afio_mapr(&mut afio.mapr) //复用重映射即寄存器
+        .bus(&mut rcc.apb2) //配置内核总线
+        .build()
+        .split();
+    let (mut tx, mut rx) = bluepill::serial::Serial::with_usart(p.device.USART2)
+        .pins(gpioa.pa2, gpioa.pa3) //映射到引脚
+        .cr(&mut gpioa.crl) //配置GPIO控制寄存器
+        .clocks(clocks) //时钟
+        .afio_mapr(&mut afio.mapr) //复用重映射
+        .bus(&mut rcc.apb1) //配置内核总线
+        .build()
+        .split();
 
-    let (mut stdout, mut stdin) = bluepill::hal::serial::Serial::usart1(
-        p.device.USART1,
-        (
-            gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh),
-            gpioa.pa10,
-        ),
-        &mut afio.mapr,
-        Config::default().baudrate(bluepill::hal::time::U32Ext::bps(115200)),
-        clocks,
-        &mut rcc.apb2,
-    )
-    .split();
-
-    // let mut rx = stdin.with_dma(channels.5);
-    let hz = 1.hz();
-    // embedded_countdown!(MsToHertzCountDown,
-    //     embedded_time::duration::Milliseconds,
-    //     stm32f1xx_hal::time::Hertz
-    //      => (ms) {
-    //             let hz: embedded_time::rate::Hertz = ms.to_rate().unwrap();
-    //             stm32f1xx_hal::time::Hertz(hz.0)
-    //     } );
     let mut apb2 = APB2 { _0: () };
     let mut timer = Timer::tim1(p.device.TIM1, &clocks, &mut apb2);
-    timer.start(5000.ms());
-    //timer.start(5000.ms());
-    // timer.start_real(5000.ms());
-    // let mut timer = MsToHertzCountDown::from(timer);
-    // timer.start(3000.ms());
-    // let mut reader = TimeoutReader(&mut stdin, &mut timer);
-    //read_dma1(&mut stdout, rx);
-    // embedded_time::Timer::new(timer, 30.ms())
+
+    let mut reader = TimeoutReader(&mut rx, &mut timer);
+
     loop {
-        nb::block!(timer.wait()).ok();
-        stdout.write_str("tick").unwrap();
+        tx.write_str("AT+GMR\n").ok();
+        match reader.read_line::<256>(5000.ms()) {
+            Ok(line) => stdout.write_str(line.as_str()).ok(),
+            Err(err) => stdout.write_str(format!("ERROR {}\r\n", err).as_str()).ok(),
+        };
     }
 }
 
@@ -199,46 +182,7 @@ impl CountDown for Timer<TIM1> {
     where
         T: Into<MilliSeconds>,
     {
-        // // pause
-        // self.tim.cr1.modify(|_, w| w.cen().clear_bit());
-        // // restart counter
-        // self.tim.cnt.reset();
-
-        // // TODO: Division is slow, try avoid this division
-        // let ticks_per_microsecond =
-        //     self.clocks.pclk1().0 * if self.clocks.ppre1() == 1 { 1 } else { 2 } / 1_000;
-        // let ticks = ticks_per_microsecond * timeout.0;
-
         let (psc, arr) = compute_arr_presc(timeout.into().0, self.clk.0);
         self.restart_raw(psc, arr);
     }
 }
-// pub struct $name<CD: CountDown<Time = $to_unit>> {
-//     t: CD,
-// }
-
-// impl<CD: CountDown<Time = $to_unit>> $name<CD> {
-//     pub fn from(t: CD) -> Self {
-//         Self { t }
-//     }
-// }
-
-// impl<CD> embedded_hal::timer::CountDown for $name<CD>
-// where
-//     CD: CountDown<Time = $to_unit>,
-// {
-//     type Time = $from_unit;
-
-//     fn start<T>(&mut self, count: T)
-//     where
-//         T: Into<Self::Time>,
-//     {
-//         let $arg: $from_unit = count.into();
-//         let to_count = $convert;
-//         self.t.start(to_count);
-//     }
-
-//     fn wait(&mut self) -> nb::Result<(), void::Void> {
-//         self.t.wait()
-//     }
-// }

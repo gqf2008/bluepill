@@ -8,6 +8,7 @@ pub mod io;
 pub mod led;
 pub mod net;
 pub mod sensor;
+pub mod serial;
 
 pub use stm32f1xx_hal as hal;
 

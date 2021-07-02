@@ -3,34 +3,30 @@
 #![feature(alloc_error_handler)]
 
 extern crate alloc;
-#[macro_use(singleton)]
-extern crate cortex_m;
-use bluepill::clocks::*;
-use bluepill::hal::delay::Delay;
-use bluepill::hal::dma::{CircReadDma, Half, RxDma};
-use bluepill::hal::gpio::gpioc::PC13;
-use bluepill::hal::gpio::{Output, PushPull};
-use bluepill::hal::{
-    pac::interrupt,
-    pac::Interrupt,
-    pac::{USART1, USART2},
-    prelude::*,
-    serial::{Config, Rx, Serial, Tx},
-};
-use bluepill::io::TimeoutReader;
-use bluepill::led::*;
-use core::borrow::Borrow;
-use core::cell::RefCell;
-use core::fmt::Write;
-use cortex_m::asm;
-use stm32f1xx_hal::time::MilliSeconds;
-
-use stm32f1xx_hal::dma::dma1::C5;
-use stm32f1xx_hal::pac::TIM1;
 
 use alloc::format;
 use alloc::string::ToString;
 use alloc_cortex_m::CortexMHeap;
+use bluepill::clocks::ClockExt;
+use bluepill::hal::{
+    delay::Delay,
+    dma::dma1::C5,
+    gpio::gpioc::PC13,
+    gpio::{Output, PushPull},
+    pac::interrupt,
+    pac::Interrupt,
+    pac::TIM1,
+    pac::{USART1, USART2},
+    prelude::*,
+    time::MilliSeconds,
+};
+use bluepill::io::TimeoutReader;
+use bluepill::led::Led;
+use bluepill::timer::Timer;
+use core::borrow::Borrow;
+use core::cell::RefCell;
+use core::fmt::Write;
+use cortex_m::asm;
 use cortex_m::{asm::wfi, interrupt::Mutex};
 use cortex_m_rt::entry;
 use embedded_dma::ReadBuffer;
@@ -59,35 +55,40 @@ fn main() -> ! {
 
     let mut rcc = p.device.RCC.constrain(); //RCC
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
-    let clocks = rcc.cfgr.full_clocks(&mut flash.acr); //配置全速时钟
+    let clocks = rcc.cfgr.clocks_72mhz(&mut flash.acr); //配置全速时钟
 
-    let channels = p.device.DMA1.split(&mut rcc.ahb);
     let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
+    let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
 
-    let (mut stdout, mut stdin) = bluepill::hal::serial::Serial::usart1(
-        p.device.USART1,
-        (
-            gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh),
-            gpioa.pa10,
-        ),
-        &mut afio.mapr,
-        Config::default().baudrate(bluepill::hal::time::U32Ext::bps(115200)),
-        clocks,
-        &mut rcc.apb2,
-    )
-    .split();
-    let mut timer =
-        bluepill::timer::Timer::tim1(p.device.TIM1, &clocks, &mut bluepill::timer::APB2 {});
-    let mut reader = TimeoutReader(&mut stdin, &mut timer);
+    //let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
+    //let mut led = Led(gpioc.pc13).ppo(&mut gpioc.crh); //配置LED
+    let (mut stdout, _) = bluepill::serial::Serial::with_usart(p.device.USART1)
+        .pins(gpioa.pa9, gpioa.pa10) //映射到引脚
+        .cr(&mut gpioa.crh) //配置GPIO控制寄存器
+        .clocks(clocks) //时钟
+        .afio_mapr(&mut afio.mapr) //复用重映射即寄存器
+        .bus(&mut rcc.apb2) //配置内核总线
+        .build()
+        .split();
+    let (mut tx, mut rx) = bluepill::serial::Serial::with_usart(p.device.USART2)
+        .pins(gpioa.pa2, gpioa.pa3) //映射到引脚
+        .cr(&mut gpioa.crl) //配置GPIO控制寄存器
+        .clocks(clocks) //时钟
+        .afio_mapr(&mut afio.mapr) //复用重映射
+        .bus(&mut rcc.apb1) //配置内核总线
+        .build()
+        .split();
+    let mut apb2 = bluepill::timer::APB2 {};
+    let mut timer = Timer::tim1(p.device.TIM1, &clocks, &mut apb2);
+
+    let mut reader = TimeoutReader(&mut rx, &mut timer);
+
     loop {
-        match reader.read_line::<256>(5000.ms()) {
-            Ok(line) => {
-                stdout.write_str(line.as_str()).ok();
-            }
-            Err(err) => {
-                stdout.write_str(format!("ERROR {}", err).as_str()).ok();
-            }
-        }
+        tx.write_str("AT+GMR\n").ok();
+        match reader.read_line::<256>(5000.ms(), None) {
+            Ok(line) => stdout.write_str(line.as_str()).ok(),
+            Err(err) => stdout.write_str(format!("ERROR {}\r\n", err).as_str()).ok(),
+        };
     }
 }
 

@@ -25,7 +25,7 @@ where
         self.write_str("AT\r\n").ok();
         let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
         loop {
-            let line = reader.read_line::<64>(5000u32)?;
+            let line = reader.read_line::<64>(5000u32, None)?;
             if line.starts_with(OK) {
                 return Ok(());
             }
@@ -40,7 +40,7 @@ where
         self.write_str("AT+GMR\r\n").ok();
         let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
         loop {
-            let line = reader.read_line::<64>(5000u32)?;
+            let line = reader.read_line::<64>(5000u32, None)?;
             if line.starts_with(OK) {
                 return Ok(buf);
             }

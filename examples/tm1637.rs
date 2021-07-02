@@ -25,7 +25,7 @@ fn main() -> ! {
     let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
 
     let mut flash = p.device.FLASH.constrain();
-    let clocks = rcc.cfgr.clocks(&mut flash.acr);
+    let clocks = rcc.cfgr.clocks_72mhz(&mut flash.acr);
     let mut clk = gpiob.pb6.into_open_drain_output(&mut gpiob.crl);
     let mut dio = gpiob.pb7.into_open_drain_output(&mut gpiob.crl);
 

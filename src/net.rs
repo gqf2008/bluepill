@@ -21,6 +21,7 @@ pub trait TcpStream: Sized {
     fn set_write_buffer(&mut self, size: usize) -> Result<()>;
     fn set_read_buffer(&mut self, size: usize) -> Result<()>;
 }
+
 pub trait Net {
     fn connect() -> Self;
     fn disconnect(&mut self) -> Result<()>;

@@ -18,7 +18,6 @@ use bluepill::hal::{
     pac::Interrupt,
     pac::{USART1, USART2},
     prelude::*,
-    prelude::*,
     serial::{Config, Rx, Tx, *},
     stm32,
     time::{Instant, MonoTimer},
@@ -58,7 +57,7 @@ fn main() -> ! {
     let mut flash = p.device.FLASH.constrain(); //Flash
     let mut rcc = p.device.RCC.constrain(); //RCC
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
-    let clocks = rcc.cfgr.full_clocks(&mut flash.acr); //配置全速时钟
+    let clocks = rcc.cfgr.clocks_72mhz(&mut flash.acr); //配置全速时钟
     let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
     //let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
     let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);

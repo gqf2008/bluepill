@@ -68,7 +68,7 @@ where
                         return Err(Error::BufferFull);
                     }
                     if byte == b {
-                        break;
+                        return Ok(read);
                     }
                 }
             }
@@ -80,14 +80,21 @@ where
                 Ok(()) => return Err(Error::Timeout),
             }
         }
-        Ok(read)
     }
 
     pub fn read_exact(&mut self, buf: &mut [u8], timeout: TIM::Time) -> Result<()> {
         self.1.start(timeout);
-        buf.iter_mut().try_for_each(|b| loop {
+        let len = buf.len();
+        let mut i = 0;
+        loop {
             match self.0.read() {
-                Ok(r) => *b = r,
+                Ok(r) => {
+                    buf[i] = r;
+                    i += 1;
+                    if i == len {
+                        return Ok(());
+                    }
+                }
                 Err(nb::Error::WouldBlock) => {}
                 Err(err) => return Err(Error::ReadError),
             }
@@ -98,7 +105,7 @@ where
                 Err(nb::Error::WouldBlock) => continue,
                 Ok(()) => return Err(Error::Timeout),
             }
-        })
+        }
     }
 }
 

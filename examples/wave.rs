@@ -18,7 +18,6 @@ use bluepill::hal::{
     pac::Interrupt,
     pac::{USART1, USART2},
     prelude::*,
-    prelude::*,
     serial::{Config, Rx, Tx, *},
     stm32,
     time::{Instant, MonoTimer},

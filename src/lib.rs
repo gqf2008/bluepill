@@ -1,6 +1,6 @@
 //! STM32F103C8T6 BSP
-
 #![no_std]
+
 pub mod clocks;
 pub mod display;
 pub mod gpio;
@@ -9,6 +9,7 @@ pub mod led;
 pub mod net;
 pub mod sensor;
 pub mod serial;
+pub mod timer;
 
 pub use stm32f1xx_hal as hal;
 

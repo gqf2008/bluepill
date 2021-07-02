@@ -57,7 +57,7 @@ fn main() -> ! {
     let mut flash = p.device.FLASH.constrain(); //Flash
     let mut rcc = p.device.RCC.constrain(); //RCC
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
-    let clocks = rcc.cfgr.clocks_72mhz(&mut flash.acr); //配置全速时钟
+    let clocks = rcc.cfgr.clocks(&mut flash.acr); //配置全速时钟
     let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
     //let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
     let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
@@ -65,20 +65,6 @@ fn main() -> ! {
     ////////////////初始化设备///////////////////
     let timer = MonoTimer::new(p.core.DWT, p.core.DCB, clocks);
     let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
-                                                     // let mut led = gpioc.pc13.to_led(&mut gpioc.crh); //配置LED
-                                                     // let (mut tx, _) = bluepill::hal::serial::Serial::usart1(
-                                                     //     p.device.USART1,
-                                                     //     (
-                                                     //         gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh),
-                                                     //         gpioa.pa10,
-                                                     //     ),
-                                                     //     &mut afio.mapr,
-                                                     //     Config::default().baudrate(115200.bps()),
-                                                     //     clocks,
-                                                     //     &mut rcc.apb2,
-                                                     // )
-                                                     // .split();
-                                                     // let mut stdout = Stdout(&mut tx);
     let scl = gpiob.pb8.into_alternate_open_drain(&mut gpiob.crh);
     let sda = gpiob.pb9.into_alternate_open_drain(&mut gpiob.crh);
 
@@ -120,15 +106,6 @@ fn main() -> ! {
         .draw(&mut display)
         .unwrap();
     let style = MonoTextStyle::new(&FONT_10X20, BinaryColor::On);
-    //im.draw(&mut display).unwrap();
-    // Text::with_alignment(
-    //     format_args!("{}", 100).as_str().unwrap(),
-    //     Point::new(10, 40),
-    //     style,
-    //     Alignment::Center,
-    // )
-    // .draw(&mut display)
-    // .unwrap();
 
     // writeln!(stdout, "超声波测距");
     loop {

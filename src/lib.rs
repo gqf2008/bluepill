@@ -9,7 +9,7 @@ pub mod led;
 pub mod net;
 pub mod sensor;
 pub mod serial;
-pub mod timer;
+// pub mod timer;
 
 pub use stm32f1xx_hal as hal;
 

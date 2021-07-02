@@ -22,7 +22,7 @@ use bluepill::hal::{
 };
 use bluepill::io::TimeoutReader;
 use bluepill::led::Led;
-use bluepill::timer::Timer;
+use bluepill::timer::MillsTimer;
 use core::borrow::Borrow;
 use core::cell::RefCell;
 use core::fmt::Write;
@@ -79,7 +79,7 @@ fn main() -> ! {
         .build()
         .split();
     let mut apb2 = bluepill::timer::APB2 {};
-    let mut timer = Timer::tim1(p.device.TIM1, &clocks, &mut apb2);
+    let mut timer = MillsTimer::tim1(p.device.TIM1, &clocks, &mut apb2);
 
     let mut reader = TimeoutReader(&mut rx, &mut timer);
 

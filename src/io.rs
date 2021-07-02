@@ -1,7 +1,5 @@
 use crate::hal::serial::Error as SerialError;
 
-extern crate alloc;
-use alloc::format;
 use core::fmt::Write;
 use embedded_hal::timer::CountDown;
 use heapless::String;
@@ -42,14 +40,10 @@ where
     R: embedded_hal::serial::Read<u8>,
     TIM: CountDown,
 {
-    pub fn read_line<const N: usize>(
-        &mut self,
-        timeout: TIM::Time,
-        tx: &mut Tx<USART1>,
-    ) -> Result<String<N>> {
+    pub fn read_line<const N: usize>(&mut self, timeout: TIM::Time) -> Result<String<N>> {
         let mut str: String<N> = String::new();
         let buf = unsafe { str.as_mut_vec() };
-        self.read_until('\n' as u8, buf, timeout, tx)?;
+        self.read_until('\n' as u8, buf, timeout)?;
         Ok(str)
     }
 
@@ -58,15 +52,14 @@ where
         byte: u8,
         buf: &mut Vec<u8, N>,
         timeout: TIM::Time,
-        tx: &mut Tx<USART1>,
     ) -> Result<usize> {
         let mut read = 0;
         self.1.start(timeout);
         loop {
             match self.0.read() {
                 Err(nb::Error::WouldBlock) => {}
-                Err(nb::Error::Other(<R as SerialError>::Framing)) => {
-                    tx.write_str(format!("{:#?}",).as_str()).ok();
+                Err(nb::Error::Other(e)) => {
+                    //tx.write_str(format!("{:#?}",).as_str()).ok();
                     return Err(Error::ReadError);
                 }
                 Ok(b) => {

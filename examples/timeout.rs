@@ -22,7 +22,7 @@ use bluepill::hal::{
 };
 use bluepill::io::TimeoutReader;
 use bluepill::led::Led;
-use bluepill::timer::MillsTimer;
+use bluepill::timer::Timer;
 use core::borrow::Borrow;
 use core::cell::RefCell;
 use core::fmt::Write;

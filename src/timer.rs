@@ -8,7 +8,7 @@ use stm32f1xx_hal::stm32::rcc::{AHBENR, APB1ENR, APB1RSTR, APB2ENR, APB2RSTR};
 use stm32f1xx_hal::time::Hertz;
 use stm32f1xx_hal::time::MilliSeconds;
 
-pub struct MillsTimer<TIM> {
+pub struct Timer<TIM> {
     pub(crate) tim: TIM,
     pub(crate) clk: Hertz,
 }
@@ -53,7 +53,7 @@ impl APB2 {
     }
 }
 
-impl MillsTimer<TIM1> {
+impl Timer<TIM1> {
     pub fn tim1(tim: TIM1, clocks: &Clocks, apb: &mut APB2) -> Self {
         apb.enr().modify(|_, w| w.tim1en().set_bit());
         apb.rstr().modify(|_, w| w.tim1rst().set_bit());
@@ -81,7 +81,7 @@ impl MillsTimer<TIM1> {
     }
 }
 
-impl CountDown for MillsTimer<TIM1> {
+impl CountDown for Timer<TIM1> {
     type Time = MilliSeconds;
     fn wait(&mut self) -> nb::Result<(), void::Void> {
         if self.tim.sr.read().uif().bit_is_clear() {
@@ -100,7 +100,7 @@ impl CountDown for MillsTimer<TIM1> {
     }
 }
 
-impl MillsTimer<TIM2> {
+impl Timer<TIM2> {
     pub fn tim2(tim: TIM2, clocks: &Clocks, apb: &mut APB1) -> Self {
         apb.enr().modify(|_, w| w.tim2en().set_bit());
         apb.rstr().modify(|_, w| w.tim2rst().set_bit());
@@ -129,7 +129,7 @@ impl MillsTimer<TIM2> {
     }
 }
 
-impl CountDown for MillsTimer<TIM2> {
+impl CountDown for Timer<TIM2> {
     type Time = MilliSeconds;
     fn wait(&mut self) -> nb::Result<(), void::Void> {
         if self.tim.sr.read().uif().bit_is_clear() {
@@ -148,7 +148,7 @@ impl CountDown for MillsTimer<TIM2> {
     }
 }
 
-impl MillsTimer<TIM3> {
+impl Timer<TIM3> {
     pub fn tim3(tim: TIM3, clocks: &Clocks, apb: &mut APB1) -> Self {
         apb.enr().modify(|_, w| w.tim3en().set_bit());
         apb.rstr().modify(|_, w| w.tim3rst().set_bit());
@@ -177,7 +177,7 @@ impl MillsTimer<TIM3> {
     }
 }
 
-impl CountDown for MillsTimer<TIM3> {
+impl CountDown for Timer<TIM3> {
     type Time = MilliSeconds;
     fn wait(&mut self) -> nb::Result<(), void::Void> {
         if self.tim.sr.read().uif().bit_is_clear() {
@@ -196,7 +196,7 @@ impl CountDown for MillsTimer<TIM3> {
     }
 }
 
-impl MillsTimer<TIM4> {
+impl Timer<TIM4> {
     pub fn tim4(tim: TIM4, clocks: &Clocks, apb: &mut APB1) -> Self {
         apb.enr().modify(|_, w| w.tim4en().set_bit());
         apb.rstr().modify(|_, w| w.tim4rst().set_bit());
@@ -225,7 +225,7 @@ impl MillsTimer<TIM4> {
     }
 }
 
-impl CountDown for MillsTimer<TIM4> {
+impl CountDown for Timer<TIM4> {
     type Time = MilliSeconds;
     fn wait(&mut self) -> nb::Result<(), void::Void> {
         if self.tim.sr.read().uif().bit_is_clear() {

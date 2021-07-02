@@ -79,16 +79,26 @@ fn main() -> ! {
         .build()
         .split();
     let mut apb2 = bluepill::timer::APB2 {};
-    let mut timer = MillsTimer::tim1(p.device.TIM1, &clocks, &mut apb2);
+    let mut timer = Timer::tim1(p.device.TIM1, &clocks, &mut apb2);
 
     let mut reader = TimeoutReader(&mut rx, &mut timer);
 
     loop {
-        tx.write_str("AT+GMR\n").ok();
-        match reader.read_line::<256>(5000.ms()) {
-            Ok(line) => stdout.write_str(line.as_str()).ok(),
-            Err(err) => stdout.write_str(format!("ERROR {}\r\n", err).as_str()).ok(),
-        };
+        tx.write_str("AT+GMR\r\n").ok();
+        loop {
+            match reader.read_line::<256>(5000.ms()) {
+                Ok(line) => {
+                    stdout.write_str(line.as_str()).ok();
+                    if line.starts_with("OK") || line.starts_with("ERROR") {
+                        break;
+                    }
+                }
+                Err(err) => {
+                    stdout.write_str(format!("ERROR {}\r\n", err).as_str()).ok();
+                    break;
+                }
+            };
+        }
     }
 }
 

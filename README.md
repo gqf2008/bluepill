@@ -84,10 +84,17 @@ cargo run --release --example tm1637
 ### E-PAPER-7.5INCH-B电子墨水屏
 
 ![E-PAPER-7.5INCH-B 图标](e-paper-7.5inch-b.jpg "E-PAPER-7.5INCH-B")
-TODO
 
 | E-PAPER-7.5INCH-B | BLUE PILL |
 | ----------------- | --------- |
+| VSYS              | V3.3      |
+| DC                | PB1       |
+| CS                | PB0       |
+| GND               | GND       |
+| SCK               | PA5       |
+| DIN               | PA6       |
+| RST               | PA7       |
+| BUSY              | PA4       |
 
 
 

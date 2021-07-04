@@ -54,10 +54,11 @@ impl APB2 {
 }
 
 impl Timer<TIM1> {
-    pub fn tim1(tim: TIM1, clocks: &Clocks, apb: &mut APB2) -> Self {
-        apb.enr().modify(|_, w| w.tim1en().set_bit());
-        apb.rstr().modify(|_, w| w.tim1rst().set_bit());
-        apb.rstr().modify(|_, w| w.tim1rst().clear_bit());
+    pub fn tim1(tim: TIM1, clocks: &Clocks) -> Self {
+        let mut apb = APB2 {};
+        &mut apb.enr().modify(|_, w| w.tim1en().set_bit());
+        &mut apb.rstr().modify(|_, w| w.tim1rst().set_bit());
+        &mut apb.rstr().modify(|_, w| w.tim1rst().clear_bit());
         Self {
             tim,
             clk: clocks.pclk2_tim(),

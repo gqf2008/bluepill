@@ -17,8 +17,9 @@ use bluepill::hal::prelude::*;
 use bluepill::hal::serial::Config;
 use bluepill::hal::timer::CountDownTimer;
 use bluepill::hal::timer::Timer;
-use bluepill::io::Stdout;
 use bluepill::led::*;
+use bluepill::stdio::{self, *};
+use bluepill::{sprint, sprintln};
 use core::cell::RefCell;
 use core::fmt::Write;
 use cortex_m::{asm::wfi, interrupt::Mutex};
@@ -63,8 +64,7 @@ fn main() -> ! {
         &mut rcc.apb2,
     )
     .split();
-
-    let mut stdout = Stdout(&mut tx);
+    stdio::use_tx1(tx);
 
     let mut led = Led(gpioc.pc13).ppo(&mut gpioc.crh); //配置LED
     let mut timer = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz());
@@ -80,10 +80,9 @@ fn main() -> ! {
 
     bluepill::enable_interrupt(Interrupt::TIM1_UP);
     bluepill::enable_interrupt(Interrupt::TIM2);
-
-    writeln!(stdout, "hello timer led");
+    sprintln!("hello timer led");
     loop {
-        writeln!(stdout, "listen timer");
+        sprintln!("listen timer");
         cortex_m::interrupt::free(|cs| {
             // Move TIMER pin here, leaving a None in its place
             TIMER
@@ -94,7 +93,7 @@ fn main() -> ! {
                 .listen(Event::Update);
         });
         delay1.delay_ms(5000u32);
-        writeln!(stdout, "unlisten timer");
+        sprintln!("unlisten timer");
         cortex_m::interrupt::free(|cs| {
             // Move TIMER pin here, leaving a None in its place
             TIMER

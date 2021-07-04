@@ -4,8 +4,10 @@ use crate::io::{BufRead, Error, Result, TimeoutReader};
 use core::fmt::Write;
 use heapless::{String, Vec};
 use nb::block;
+use stm32f1xx_hal::time::MilliSeconds;
+use stm32f1xx_hal::time::U32Ext;
 
-const OK: &str = "OK";
+const OK: &str = "OK\r\n";
 const ERROR: &str = "ERROR";
 pub struct Esp8266<T, TIM> {
     port: T,
@@ -15,7 +17,7 @@ pub struct Esp8266<T, TIM> {
 impl<T, TIM> Esp8266<T, TIM>
 where
     T: embedded_hal::serial::Read<u8> + embedded_hal::serial::Write<u8>,
-    TIM: embedded_hal::timer::CountDown<Time = u32>,
+    TIM: embedded_hal::timer::CountDown<Time = MilliSeconds>,
 {
     pub fn new(port: T, timer: TIM) -> Self {
         Self { port, timer }
@@ -25,40 +27,61 @@ where
         self.write_str("AT\r\n").ok();
         let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
         loop {
-            let line = reader.read_line::<64>(5000u32, None)?;
-            if line.starts_with(OK) {
-                return Ok(());
-            }
-            if line.starts_with(ERROR) {
-                return Ok(());
+            match reader.read_line::<64>(5000.ms())? {
+                line if line == OK => {
+                    return Ok(());
+                }
+                line if line.starts_with(ERROR) => {
+                    return Err(Error::Other(1));
+                }
+                _ => {}
             }
         }
     }
 
     pub fn info(&mut self) -> Result<String<256>> {
-        let mut buf = String::new();
+        let mut buf: String<256> = String::new();
         self.write_str("AT+GMR\r\n").ok();
         let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
         loop {
-            let line = reader.read_line::<64>(5000u32, None)?;
-            if line.starts_with(OK) {
-                return Ok(buf);
+            match reader.read_line::<64>(5000.ms())? {
+                line if line == OK || line.starts_with(ERROR) => {
+                    buf.push_str(line.as_str()).ok();
+                    return Ok(buf);
+                }
+                line => {
+                    buf.push_str(line.as_str()).ok();
+                }
             }
-            if line.starts_with(ERROR) {
-                return Err(Error::Other(1));
-            }
-            buf.push_str(line.as_str()).ok();
         }
     }
 
-    pub fn connect(&mut self) -> Result<()> {
-        todo!()
+    pub fn connect(&mut self, ssid: &str, password: &str) -> Result<()> {
+        //"AT+CWJAP_DEF=\"bbt\",\"GZW2003GXH2011\"\r\n"
+        let mut cmd: String<128> = String::from("AT+CWJAP_DEF=\"");
+        cmd.push_str(ssid).ok();
+        cmd.push_str("\",\"").ok();
+        cmd.push_str(password).ok();
+        cmd.push_str("\"\r\n").ok();
+        self.write_str(cmd.as_str()).ok();
+        let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
+        loop {
+            match reader.read_line::<64>(5000.ms())? {
+                line if line == OK => {
+                    return Ok(());
+                }
+                line if line.starts_with(ERROR) => {
+                    return Err(Error::Other(1));
+                }
+                _ => {}
+            }
+        }
     }
 
     pub fn read<const N: usize>(&mut self, timeout: u32) -> Result<Vec<u8, N>> {
         let mut buf: Vec<u8, N> = Vec::new();
         let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
-        reader.read_exact(&mut buf[..], timeout)?;
+        reader.read_exact(&mut buf[..], timeout.ms())?;
         Ok(buf)
     }
 }

@@ -22,7 +22,9 @@ use bluepill::hal::{
 };
 use bluepill::io::TimeoutReader;
 use bluepill::led::Led;
+use bluepill::stdio;
 use bluepill::timer::Timer;
+use bluepill::*;
 use core::borrow::Borrow;
 use core::cell::RefCell;
 use core::fmt::Write;
@@ -70,6 +72,7 @@ fn main() -> ! {
         .bus(&mut rcc.apb2) //配置内核总线
         .build()
         .split();
+    stdio::use_tx1(stdout);
     let (mut tx, mut rx) = bluepill::serial::Serial::with_usart(p.device.USART2)
         .pins(gpioa.pa2, gpioa.pa3) //映射到引脚
         .cr(&mut gpioa.crl) //配置GPIO控制寄存器
@@ -78,17 +81,39 @@ fn main() -> ! {
         .bus(&mut rcc.apb1) //配置内核总线
         .build()
         .split();
-    let mut apb2 = bluepill::timer::APB2 {};
-    let mut timer = Timer::tim1(p.device.TIM1, &clocks, &mut apb2);
+    let mut timer = Timer::tim1(p.device.TIM1, &clocks);
 
-    let mut reader = TimeoutReader(&mut rx, &mut timer);
-
+    use heapless::String;
+    let mut connected = false;
     loop {
-        tx.write_str("AT+GMR\n").ok();
-        match reader.read_line::<256>(5000.ms(), None) {
-            Ok(line) => stdout.write_str(line.as_str()).ok(),
-            Err(err) => stdout.write_str(format!("ERROR {}\r\n", err).as_str()).ok(),
+        let mut buf: String<256> = String::new();
+        let mut read_reply = |timeout| loop {
+            let mut reader = TimeoutReader(&mut rx, &mut timer);
+            match reader.read_line::<64>(timeout) {
+                Ok(line) => {
+                    buf.push_str(line.as_str()).ok();
+                    if line.starts_with("OK") || line.starts_with("ERROR") {
+                        break;
+                    }
+                }
+                Err(err) => sprintln!("ERROR {:?}", err),
+            }
         };
+        if !connected {
+            tx.write_str("AT+CWJAP_DEF=\"bbt\",\"GZW2003GXH2011\"\r\n")
+                .ok();
+            read_reply(15000.ms());
+            if buf.as_str().contains("OK") {
+                connected = true;
+            }
+        } else {
+            tx.write_str("AT+CIFSR\r\n").ok();
+            read_reply(5000.ms());
+        }
+
+        sprint!(buf.as_str());
+        timer.start(5000.ms());
+        nb::block!(timer.wait()).ok();
     }
 }
 

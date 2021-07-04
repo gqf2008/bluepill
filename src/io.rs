@@ -53,6 +53,7 @@ where
     ) -> Result<usize> {
         let mut read = 0;
         self.1.start(timeout);
+
         loop {
             match self.0.read() {
                 Err(nb::Error::WouldBlock) => {}

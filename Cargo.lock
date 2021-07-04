@@ -45,7 +45,7 @@ version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30302dda7a66f8c55932ebf208f7def840743ff64d495e9ceffcd97c18f11d39"
 dependencies = [
- "cortex-m 0.7.2",
+ "cortex-m 0.7.3",
 ]
 
 [[package]]
@@ -105,7 +105,7 @@ dependencies = [
  "cast",
  "cipher",
  "cobs",
- "cortex-m 0.6.7",
+ "cortex-m 0.7.3",
  "cortex-m-rt",
  "cortex-m-rtic",
  "crc16",
@@ -195,15 +195,15 @@ dependencies = [
  "aligned",
  "bare-metal",
  "bitfield",
- "cortex-m 0.7.2",
+ "cortex-m 0.7.3",
  "volatile-register",
 ]
 
 [[package]]
 name = "cortex-m"
-version = "0.7.2"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "643a210c1bdc23d0db511e2a576082f4ff4dcae9d0c37f50b431b8f8439d6d6b"
+checksum = "2ac919ef424449ec8c08d515590ce15d9262c0ca5f0da5b0c901e971a3b783b3"
 dependencies = [
  "bare-metal",
  "bitfield",
@@ -264,7 +264,7 @@ version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bffa6c1454368a6aa4811ae60964c38e6996d397ff8095a8b9211b1c1f749bc"
 dependencies = [
- "cortex-m 0.7.2",
+ "cortex-m 0.6.7",
 ]
 
 [[package]]
@@ -701,7 +701,7 @@ version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d577d97d1b31268087b6dddf2470e6794ef5eee87d9dca7fcd0481695391a4c"
 dependencies = [
- "cortex-m 0.7.2",
+ "cortex-m 0.6.7",
 ]
 
 [[package]]
@@ -710,7 +710,7 @@ version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d55dedd501dfd02514646e0af4d7016ce36bc12ae177ef52056989966a1eec"
 dependencies = [
- "cortex-m 0.7.2",
+ "cortex-m 0.6.7",
  "cortex-m-semihosting",
 ]
 

@@ -23,7 +23,6 @@ use bluepill::hal::{
     time::{Instant, MonoTimer},
     timer::Timer,
 };
-
 use bluepill::sensor::HcSr04;
 use core::fmt::Write;
 use core::time::Duration;

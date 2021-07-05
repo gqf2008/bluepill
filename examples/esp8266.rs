@@ -70,31 +70,34 @@ fn main() -> ! {
         .start_count_down(1.hz());
 
     let mut wifi = esp826601s::Esp8266::new(port, timer);
-    sprintln!("Hello, esp8266");
-    let mut connected = false;
-    loop {
-        if !connected {
-            wifi.hello().ok();
-            wifi.connect("Wosai-Guest", "Shouqianba$520", false).ok();
-            connected = true;
-            match wifi.device_info() {
-                Ok(inf) => sprint!("{}", inf),
-                Err(bluepill::io::Error::Other(err)) => sprint!("{:?}", err),
-                Err(err) => {
-                    sprintln!("{:?}", err)
-                }
-            }
-            match wifi.ifconfig() {
-                Ok(inf) => sprint!("{}", inf),
-                Err(bluepill::io::Error::Other(err)) => sprint!("{:?}", err),
-                Err(err) => {
-                    sprintln!("{:?}", err)
-                }
-            }
+    wifi.hello().ok();
+    wifi.dial("Wosai-Guest", "Shouqianba$520", false).ok();
+    match wifi.device_info() {
+        Ok(inf) => sprint!("{}", inf),
+        Err(bluepill::io::Error::Other(err)) => sprint!("{:?}", err),
+        Err(err) => {
+            sprintln!("{:?}", err)
         }
-        if let Ok(reply) = wifi.ping("www.baidu.com") {
+    }
+    match wifi.ifconfig() {
+        Ok(inf) => sprint!("{}", inf),
+        Err(bluepill::io::Error::Other(err)) => sprint!("{:?}", err),
+        Err(err) => {
+            sprintln!("{:?}", err)
+        }
+    }
+    match wifi.update() {
+        Ok(inf) => sprint!("{}", inf),
+        Err(bluepill::io::Error::Other(err)) => sprint!("{:?}", err),
+        Err(err) => {
+            sprint!("{:?}", err)
+        }
+    }
+    loop {
+        if let Ok(reply) = wifi.net_state() {
             sprint!("{}", reply);
         }
+
         delay.delay_ms(5000u32);
     }
 }

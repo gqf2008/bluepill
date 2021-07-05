@@ -58,27 +58,8 @@ where
         self.request("AT+RESTORE\r\n", 5000)
     }
 
-    pub fn ping(&mut self, domain: &str) -> Result<String<256>> {
-        //AT+PING="www.shouqianba.com"
-        let mut cmd: String<128> = String::from("AT+PING=\"");
-        cmd.push_str(domain).ok();
-        cmd.push_str("\"\r\n").ok();
-        self.request(cmd.as_str(), 5000)
-    }
-
-    pub fn reslove(&mut self, domain: &str) -> Result<String<256>> {
-        let mut cmd: String<128> = String::from("AT+CIPDOMAIN=\"");
-        cmd.push_str(domain).ok();
-        cmd.push_str("\"\r\n").ok();
-        self.request(cmd.as_str(), 5000)
-    }
-
-    pub fn connect(
-        &mut self,
-        ssid: &str,
-        password: &str,
-        autoconnect: bool,
-    ) -> Result<String<256>> {
+    //连接AP
+    pub fn dial(&mut self, ssid: &str, password: &str, autoconnect: bool) -> Result<String<256>> {
         let mut cmd: String<128> = String::from("AT+CWJAP_DEF=\"");
         cmd.push_str(ssid).ok();
         cmd.push_str("\",\"").ok();
@@ -92,6 +73,11 @@ where
         }
 
         Ok(reply)
+    }
+
+    //断开与AP的连接
+    pub fn hangup(&mut self) -> Result<String<256>> {
+        self.request("AT+CWQAP\r\n", 5000)
     }
 
     #[inline]
@@ -116,8 +102,43 @@ where
         }
     }
 
+    /////////////////////////////////////////////////////////////
+
     pub fn ifconfig(&mut self) -> Result<String<256>> {
         self.request("AT+CIFSR\r\n", 5000)
+    }
+
+    pub fn ping(&mut self, domain: &str) -> Result<String<256>> {
+        //AT+PING="www.shouqianba.com"
+        let mut cmd: String<128> = String::from("AT+PING=\"");
+        cmd.push_str(domain).ok();
+        cmd.push_str("\"\r\n").ok();
+        self.request(cmd.as_str(), 5000)
+    }
+
+    pub fn reslove(&mut self, domain: &str) -> Result<String<256>> {
+        let mut cmd: String<128> = String::from("AT+CIPDOMAIN=\"");
+        cmd.push_str(domain).ok();
+        cmd.push_str("\"\r\n").ok();
+        self.request(cmd.as_str(), 5000)
+    }
+
+    pub fn net_state(&mut self) -> Result<String<256>> {
+        self.request("AT+CIPSTATUS\r\n", 5000)
+    }
+
+    pub fn connect(&mut self, addr: (&str, &str)) -> Result<String<256>> {
+        //AT+CIPSTART="TCP","iot.espressif.cn",8000 建立TCP连接
+        let mut cmd: String<128> = String::from("AT+CIPSTART=\"TCP\",\"");
+        cmd.push_str(addr.0).ok();
+        cmd.push_str("\",").ok();
+        cmd.push_str(addr.1).ok();
+        cmd.push_str("\r\n").ok();
+        self.request(cmd.as_str(), 15000)
+    }
+
+    pub fn disconnect(&mut self) -> Result<String<256>> {
+        self.request("AT+CIPCLOSE", 5000)
     }
 
     pub fn write_exact(&mut self, buf: &[u8]) -> Result<usize> {
@@ -131,5 +152,32 @@ where
         let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
         reader.read_exact(buf, timeout)?;
         Ok(())
+    }
+
+    pub fn send_data(&mut self, buf: &[u8]) -> Result<usize> {
+        let mut cmd: String<128> = String::from("AT+CIPSEND=");
+        cmd.push_str("111").ok();
+        cmd.push_str("\r\n").ok();
+        self.write_exact(cmd.as_bytes()).ok();
+        {
+            let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
+            let mut reply = [0; 1];
+            reader.read_exact(&mut reply, 5000)?;
+        }
+        self.write_exact(buf)?;
+        let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
+        loop {
+            match reader.read_line::<256>(5000)? {
+                line if line.starts_with("SEND  OK") => return Ok(buf.len()),
+                line if line.starts_with("SEND	FAIL") || line.starts_with("ERROR") => {
+                    return Err(Error::WriteError)
+                }
+                _ => {}
+            }
+        }
+    }
+    pub fn read_data(&mut self, buf: &mut [u8]) -> Result<usize> {
+        //AT+CIPRECVDATA=<len>
+        todo!()
     }
 }

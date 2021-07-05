@@ -69,24 +69,31 @@ fn main() -> ! {
         .build()
         .start_count_down(1.hz());
 
-    let mut esp8266 = esp826601s::Esp8266::new(port, timer);
+    let mut wifi = esp826601s::Esp8266::new(port, timer);
     sprintln!("Hello, esp8266");
     let mut connected = false;
     loop {
         if !connected {
-            esp8266.hello().ok();
-            esp8266.connect("Wosai-Guest", "Shouqianba$520", false).ok();
+            wifi.hello().ok();
+            wifi.connect("Wosai-Guest", "Shouqianba$520", false).ok();
             connected = true;
-        }
-        match esp8266.device_info() {
-            Ok(inf) => sprint!("{}", inf),
-            Err(bluepill::io::Error::Other(err)) => sprint!("{:?}", err),
-            Err(err) => {
-                sprintln!("{:?}", err)
+            match wifi.device_info() {
+                Ok(inf) => sprint!("{}", inf),
+                Err(bluepill::io::Error::Other(err)) => sprint!("{:?}", err),
+                Err(err) => {
+                    sprintln!("{:?}", err)
+                }
+            }
+            match wifi.ifconfig() {
+                Ok(inf) => sprint!("{}", inf),
+                Err(bluepill::io::Error::Other(err)) => sprint!("{:?}", err),
+                Err(err) => {
+                    sprintln!("{:?}", err)
+                }
             }
         }
-        if let Ok(inf) = esp8266.ifconfig() {
-            sprint!("{}", inf);
+        if let Ok(reply) = wifi.ping("www.baidu.com") {
+            sprint!("{}", reply);
         }
         delay.delay_ms(5000u32);
     }

@@ -104,8 +104,7 @@ fn main() -> ! {
             }
         };
         if !connected {
-            tx.write_str("AT+CWJAP_DEF=\"Wosai-Guest\",\"Shouqianba$520\"\r\n")
-                .ok();
+            tx.write_str("AT+CWJAP_DEF=\"xxxx\",\"xxxx\"\r\n").ok();
             read_reply(15000);
             if buf.as_str().contains("OK") {
                 connected = true;

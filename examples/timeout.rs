@@ -23,7 +23,7 @@ use bluepill::hal::{
 use bluepill::io::TimeoutReader;
 use bluepill::led::Led;
 use bluepill::stdio;
-use bluepill::timer::Timer;
+use bluepill::timer::TimerBuilder;
 use bluepill::*;
 use core::borrow::Borrow;
 use core::cell::RefCell;
@@ -81,7 +81,11 @@ fn main() -> ! {
         .bus(&mut rcc.apb1) //配置内核总线
         .build()
         .split();
-    let mut timer = Timer::tim1(p.device.TIM1, &clocks);
+    let mut timer = TimerBuilder::with_tim(p.device.TIM1)
+        .clocks(clocks)
+        .bus(&mut rcc.apb2)
+        .build()
+        .start_count_down(1.hz());
 
     use heapless::String;
     let mut connected = false;
@@ -100,19 +104,19 @@ fn main() -> ! {
             }
         };
         if !connected {
-            tx.write_str("AT+CWJAP_DEF=\"bbt\",\"GZW2003GXH2011\"\r\n")
+            tx.write_str("AT+CWJAP_DEF=\"Wosai-Guest\",\"Shouqianba$520\"\r\n")
                 .ok();
-            read_reply(15000.ms());
+            read_reply(15000);
             if buf.as_str().contains("OK") {
                 connected = true;
             }
         } else {
-            tx.write_str("AT+CIFSR\r\n").ok();
-            read_reply(5000.ms());
+            tx.write_str("AT+GMR\r\n").ok();
+            read_reply(5000);
         }
 
         sprint!(buf.as_str());
-        timer.start(5000.ms());
+        timer.start(5000);
         nb::block!(timer.wait()).ok();
     }
 }

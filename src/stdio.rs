@@ -1,10 +1,7 @@
 use crate::io::{self, *};
 use core::fmt::{self, Write};
 use cortex_m::interrupt;
-use embedded_hal::timer::CountDown;
 use heapless::String;
-use heapless::Vec;
-use nb::block;
 
 use stm32f1xx_hal::pac::USART1;
 use stm32f1xx_hal::serial::{Rx, Tx};
@@ -48,21 +45,10 @@ where
     T: embedded_hal::serial::Write<u8, Error = ::core::convert::Infallible>,
 {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        for byte in s.as_bytes() {
-            if *byte == b'\n' {
-                let res = block!(self.0.write(b'\r'));
-                if res.is_err() {
-                    return Err(core::fmt::Error);
-                }
-            }
-
-            let res = block!(self.0.write(*byte));
-
-            if res.is_err() {
-                return Err(core::fmt::Error);
-            }
-        }
-        Ok(())
+        s.as_bytes()
+            .iter()
+            .try_for_each(|c| nb::block!(self.0.write(*c)))
+            .map_err(|_| core::fmt::Error)
     }
 }
 

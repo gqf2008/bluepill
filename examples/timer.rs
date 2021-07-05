@@ -67,7 +67,7 @@ fn main() -> ! {
     stdio::use_tx1(tx);
 
     let mut led = Led(gpioc.pc13).ppo(&mut gpioc.crh); //配置LED
-    let mut timer = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.hz());
+    let mut timer = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2); //.start_count_down(1.hz());
     let mut delay = Timer::tim2(p.device.TIM2, &clocks, &mut rcc.apb1).start_count_down(1.hz());
     timer.listen(Event::Update);
     delay.listen(Event::Update);

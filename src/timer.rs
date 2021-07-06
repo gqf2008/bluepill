@@ -1,7 +1,6 @@
 //!参考hal库实现基于时间的定时器
 
 use embedded_hal::timer::CountDown;
-use stm32f1xx_hal::pac::RCC;
 use stm32f1xx_hal::pac::{TIM1, TIM2, TIM3, TIM4};
 use stm32f1xx_hal::rcc::{Clocks, APB1, APB2};
 use stm32f1xx_hal::timer::Timer;

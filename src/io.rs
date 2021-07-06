@@ -93,6 +93,7 @@ where
         self.1.start(1.khz());
         let len = buf.len();
         let mut i = 0;
+        let mut timeout = 0;
         loop {
             match self.0.read() {
                 Ok(r) => {
@@ -102,7 +103,9 @@ where
                         return Ok(());
                     }
                 }
-                Err(nb::Error::WouldBlock) => {}
+                Err(nb::Error::WouldBlock) => {
+                    timeout += 1;
+                }
                 Err(err) => return Err(Error::ReadError),
             }
             match self.1.wait() {
@@ -110,7 +113,12 @@ where
                     unreachable!()
                 }
                 Err(nb::Error::WouldBlock) => continue,
-                Ok(()) => return Err(Error::Timeout),
+                Ok(()) => {
+                    if timeout == milliseconds {
+                        return Err(Error::Timeout);
+                    }
+                    self.1.start(1.khz());
+                }
             }
         }
     }

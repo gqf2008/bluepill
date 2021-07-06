@@ -14,8 +14,8 @@ impl ClockExt for CFGR {
         self.use_hse(8.mhz())
             .hclk(72.mhz())
             .sysclk(72.mhz())
-            .pclk1(24.mhz())
-            .pclk2(24.mhz())
+            .pclk1(36.mhz())
+            .pclk2(72.mhz())
             .freeze(acr)
     }
 

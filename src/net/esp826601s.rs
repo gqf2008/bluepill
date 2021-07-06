@@ -158,10 +158,11 @@ where
         let mut cmd: String<128> = String::from("AT+CIPSEND=");
         cmd.push_str("111").ok();
         cmd.push_str("\r\n").ok();
-        self.write_exact(cmd.as_bytes()).ok();
+        self.request(cmd.as_str(), 5000)?;
         {
             let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
             let mut reply = [0; 1];
+            //read '>'
             reader.read_exact(&mut reply, 5000)?;
         }
         self.write_exact(buf)?;

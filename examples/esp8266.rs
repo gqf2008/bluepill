@@ -56,22 +56,29 @@ fn main() -> ! {
         .build()
         .split();
     stdio::use_tx1(stdout);
+    sprintln!("build serial");
     let port = bluepill::serial::Serial::with_usart(p.device.USART2)
         .pins(gpioa.pa2, gpioa.pa3) //映射到引脚
         .cr(&mut gpioa.crl) //配置GPIO控制寄存器
         .clocks(clocks) //时钟
         .afio_mapr(&mut afio.mapr) //复用重映射
         .bus(&mut rcc.apb1) //配置内核总线
-        .build();
+        .build_rw();
     let timer = TimerBuilder::with_tim(p.device.TIM1)
         .clocks(clocks)
         .bus(&mut rcc.apb2)
         .build()
         .start_count_down(1.hz());
-
+    sprintln!("build serial ok");
+    sprintln!("new esp826601s");
     let mut wifi = esp826601s::Esp8266::new(port, timer);
+    sprintln!("new esp826601s ok");
+    sprintln!("hello");
     wifi.hello().ok();
+    sprintln!("hello ok");
+    sprintln!("dial");
     wifi.dial("Wosai-Guest", "Shouqianba$520", false).ok();
+    sprintln!("dial ok");
     match wifi.device_info() {
         Ok(inf) => sprint!("{}", inf),
         Err(bluepill::io::Error::Other(err)) => sprint!("{:?}", err),

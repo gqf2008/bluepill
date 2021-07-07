@@ -31,191 +31,125 @@ use core::cell::RefCell;
 use core::convert::Infallible;
 use cortex_m::interrupt::Mutex;
 use embedded_hal::serial::{Read, Write};
-use heapless::spsc::{Consumer, Producer, Queue};
+use heapless::spsc::Queue;
 use heapless::String;
 
 const OK: &str = "OK";
 const ERROR: &str = "ERROR";
 
-static RX1: Mutex<RefCell<Option<Rx<USART1>>>> = Mutex::new(RefCell::new(None));
-static mut TX1_BUFFER: Option<Queue<u8, 4096>> = None;
-static RX2: Mutex<RefCell<Option<Rx<USART2>>>> = Mutex::new(RefCell::new(None));
-static mut TX2_BUFFER: Option<Queue<u8, 4096>> = None;
-static RX3: Mutex<RefCell<Option<Rx<USART3>>>> = Mutex::new(RefCell::new(None));
-static mut TX3_BUFFER: Option<Queue<u8, 4096>> = None;
+// pub struct RW<W> {
+//     tx: W,
+// }
 
-pub struct Buffer<'a, T, const N: usize>(&'a mut Consumer<'a, T, N>);
+// macro_rules! esp8266 {
+//     ($(
+//         $(#[$meta:meta])*
+//         $USARTX:ident: ($RXX:ident, $BUFX:ident),
+//     )+) => {
+//         $(
+//             $(#[$meta])*
 
-impl<'a, T, const N: usize> Buffer<'a, T, N> {
-    /// Reads a single word from the serial interface
-    fn read(&mut self, buf: &mut [T]) -> nb::Result<usize, crate::io::Error> {
-        for (i, b) in buf.iter_mut().enumerate() {
-            match self.0.dequeue() {
-                Some(v) => *b = v,
-                None => return Ok(i + 1),
-            }
-        }
-        unreachable!()
-    }
-}
+//         impl RW<Tx<$USARTX>> {
+//             pub fn new<PINS>(serial: Serial<$USARTX, PINS>) -> Self
+//             where
+//                 PINS: Pins<$USARTX>,
+//             {
+//                 let (tx, rx) = serial.split();
+//                 let q: Queue<u8, 4096> = Queue::new();
+//                 cortex_m::interrupt::free(|cs| {
+//                     $RXX.borrow(cs).replace(Some(rx)).unwrap();
+//                     unsafe { $BUFX.replace(q) };
+//                 });
+//                 crate::enable_interrupt(crate::hal::pac::Interrupt::$USARTX);
+//                 Self { tx }
+//             }
+//         }
 
-impl<'a, T, const N: usize> Read<T> for Buffer<'a, T, N> {
-    /// Reads a single word from the serial interface
-    type Error = crate::io::Error;
-    fn read(&mut self) -> nb::Result<T, Self::Error> {
-        match self.0.dequeue() {
-            Some(v) => Ok(v),
-            None => Err(nb::Error::WouldBlock),
-        }
-    }
-}
-pub struct ESP8266<W> {
-    tx: W,
-}
+//         impl Write<u8> for RW<Tx<$USARTX>> {
+//             type Error = Infallible;
 
-// impl ESP8266<Tx<USART1>> {
-//     pub fn new<PINS>(serial: Serial<USART1, PINS>) -> Self
-//     where
-//         PINS: Pins<USART1>,
-//     {
-//         let (tx, rx) = serial.split();
-//         let q: Queue<u8, 4096> = Queue::new();
-//         cortex_m::interrupt::free(|cs| {
-//             RX1.borrow(cs).replace(Some(rx)).unwrap();
-//             unsafe { RX1_BUFFER.replace(q) };
-//         });
-//         crate::enable_interrupt(crate::hal::pac::Interrupt::USART1);
-//         Self { tx }
+//             fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
+//                 self.tx.write(word)
+//             }
+
+//             fn flush(&mut self) -> nb::Result<(), Self::Error> {
+//                 self.tx.flush()
+//             }
+//         }
+
+//         impl Read<u8> for RW<Tx<$USARTX>> {
+//             type Error = crate::io::Error;
+//             fn read(&mut self) -> nb::Result<u8, Self::Error> {
+//                 cortex_m::interrupt::free(|_| match unsafe { $BUFX.as_mut() } {
+//                     Some(q) => match q.dequeue() {
+//                         Some(w) => Ok(w),
+//                         None => Err(nb::Error::WouldBlock),
+//                     },
+//                     None => Err(nb::Error::Other(crate::io::Error::NoIoDevice)),
+//                 })
+//             }
+//         }
+//         )+
 //     }
 // }
 
-// impl Write<u8> for ESP8266<Tx<USART1>> {
-//     type Error = Infallible;
-
-//     fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
-//         self.tx.write(word)
-//     }
-
-//     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-//         self.tx.flush()
-//     }
+// esp8266! {
+//     USART1:(RX1, TX1_BUFFER),
+//     USART2:(RX2, TX2_BUFFER),
+//     USART3:(RX3, TX3_BUFFER),
 // }
 
-// impl Read<u8> for ESP8266<Tx<USART1>> {
-//     type Error = crate::io::Error;
-//     fn read(&mut self) -> nb::Result<u8, Self::Error> {
-//         cortex_m::interrupt::free(|_| match unsafe { RX1_BUFFER.as_mut() } {
-//             Some(q) => match q.dequeue() {
-//                 Some(w) => Ok(w),
-//                 None => Err(nb::Error::WouldBlock),
-//             },
-//             None => Err(nb::Error::Other(crate::io::Error::NoIoDevice)),
+// static RX1: Mutex<RefCell<Option<Rx<USART1>>>> = Mutex::new(RefCell::new(None));
+// static mut TX1_BUFFER: Option<Queue<u8, 4096>> = None;
+// static RX2: Mutex<RefCell<Option<Rx<USART2>>>> = Mutex::new(RefCell::new(None));
+// static mut TX2_BUFFER: Option<Queue<u8, 4096>> = None;
+// static RX3: Mutex<RefCell<Option<Rx<USART3>>>> = Mutex::new(RefCell::new(None));
+// static mut TX3_BUFFER: Option<Queue<u8, 4096>> = None;
+
+// #[interrupt]
+// unsafe fn USART1() {
+//     static mut RX: Option<Rx<USART1>> = None;
+//     let rx = RX.get_or_insert_with(|| {
+//         cortex_m::interrupt::free(|cs| RX1.borrow(cs).replace(None).unwrap())
+//     });
+//     if let Ok(w) = nb::block!(rx.read()) {
+//         cortex_m::interrupt::free(|_| {
+//             if let Some(buf) = TX1_BUFFER.as_mut() {
+//                 buf.enqueue(w).ok();
+//             }
 //         })
 //     }
 // }
 
-macro_rules! esp8266 {
-    ($(
-        $(#[$meta:meta])*
-        $USARTX:ident: ($RXX:ident, $BUFX:ident),
-    )+) => {
-        $(
-            $(#[$meta])*
+// #[interrupt]
+// unsafe fn USART2() {
+//     static mut RX: Option<Rx<USART2>> = None;
+//     let rx = RX.get_or_insert_with(|| {
+//         cortex_m::interrupt::free(|cs| RX2.borrow(cs).replace(None).unwrap())
+//     });
+//     if let Ok(w) = nb::block!(rx.read()) {
+//         cortex_m::interrupt::free(|_| {
+//             if let Some(buf) = TX2_BUFFER.as_mut() {
+//                 buf.enqueue(w).ok();
+//             }
+//         })
+//     }
+// }
 
-        impl ESP8266<Tx<$USARTX>> {
-            pub fn new<PINS>(serial: Serial<$USARTX, PINS>) -> Self
-            where
-                PINS: Pins<$USARTX>,
-            {
-                let (tx, rx) = serial.split();
-                let q: Queue<u8, 4096> = Queue::new();
-                cortex_m::interrupt::free(|cs| {
-                    $RXX.borrow(cs).replace(Some(rx)).unwrap();
-                    unsafe { $BUFX.replace(q) };
-                });
-                crate::enable_interrupt(crate::hal::pac::Interrupt::$USARTX);
-                Self { tx }
-            }
-        }
-
-        impl Write<u8> for ESP8266<Tx<$USARTX>> {
-            type Error = Infallible;
-
-            fn write(&mut self, word: u8) -> nb::Result<(), Self::Error> {
-                self.tx.write(word)
-            }
-
-            fn flush(&mut self) -> nb::Result<(), Self::Error> {
-                self.tx.flush()
-            }
-        }
-
-        impl Read<u8> for ESP8266<Tx<$USARTX>> {
-            type Error = crate::io::Error;
-            fn read(&mut self) -> nb::Result<u8, Self::Error> {
-                cortex_m::interrupt::free(|_| match unsafe { $BUFX.as_mut() } {
-                    Some(q) => match q.dequeue() {
-                        Some(w) => Ok(w),
-                        None => Err(nb::Error::WouldBlock),
-                    },
-                    None => Err(nb::Error::Other(crate::io::Error::NoIoDevice)),
-                })
-            }
-        }
-        )+
-    }
-}
-
-esp8266! {
-    USART1:(RX1, TX1_BUFFER),
-    USART2:(RX2, TX2_BUFFER),
-    USART3:(RX3, TX3_BUFFER),
-}
-
-#[interrupt]
-unsafe fn USART1() {
-    static mut RX: Option<Rx<USART1>> = None;
-    let rx = RX.get_or_insert_with(|| {
-        cortex_m::interrupt::free(|cs| RX1.borrow(cs).replace(None).unwrap())
-    });
-    if let Ok(w) = nb::block!(rx.read()) {
-        cortex_m::interrupt::free(|_| {
-            if let Some(buf) = TX1_BUFFER.as_mut() {
-                buf.enqueue(w).ok();
-            }
-        })
-    }
-}
-
-#[interrupt]
-unsafe fn USART2() {
-    static mut RX: Option<Rx<USART2>> = None;
-    let rx = RX.get_or_insert_with(|| {
-        cortex_m::interrupt::free(|cs| RX2.borrow(cs).replace(None).unwrap())
-    });
-    if let Ok(w) = nb::block!(rx.read()) {
-        cortex_m::interrupt::free(|_| {
-            if let Some(buf) = TX2_BUFFER.as_mut() {
-                buf.enqueue(w).ok();
-            }
-        })
-    }
-}
-
-#[interrupt]
-unsafe fn USART3() {
-    static mut RX: Option<Rx<USART3>> = None;
-    let rx = RX.get_or_insert_with(|| {
-        cortex_m::interrupt::free(|cs| RX3.borrow(cs).replace(None).unwrap())
-    });
-    if let Ok(w) = nb::block!(rx.read()) {
-        cortex_m::interrupt::free(|_| {
-            if let Some(buf) = TX3_BUFFER.as_mut() {
-                buf.enqueue(w).ok();
-            }
-        })
-    }
-}
+// #[interrupt]
+// unsafe fn USART3() {
+//     static mut RX: Option<Rx<USART3>> = None;
+//     let rx = RX.get_or_insert_with(|| {
+//         cortex_m::interrupt::free(|cs| RX3.borrow(cs).replace(None).unwrap())
+//     });
+//     if let Ok(w) = nb::block!(rx.read()) {
+//         cortex_m::interrupt::free(|_| {
+//             if let Some(buf) = TX3_BUFFER.as_mut() {
+//                 buf.enqueue(w).ok();
+//             }
+//         })
+//     }
+// }
 
 pub struct Esp8266<T, TIM> {
     port: T,

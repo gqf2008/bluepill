@@ -42,30 +42,23 @@ fn main() -> ! {
     let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
     let mut led = Led(gpioc.pc13).ppo(&mut gpioc.crh); //配置LED
 
-    let (mut stdout, mut stdin) = bluepill::hal::serial::Serial::usart1(
-        p.device.USART1,
-        (
-            gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh),
-            gpioa.pa10,
-        ),
-        &mut afio.mapr,
-        Config::default().baudrate(115200.bps()),
-        clocks,
-        &mut rcc.apb2,
-    )
-    .split();
-    let (mut tx2, mut rx2) = bluepill::hal::serial::Serial::usart2(
-        p.device.USART2,
-        (
-            gpioa.pa2.into_alternate_push_pull(&mut gpioa.crl),
-            gpioa.pa3,
-        ),
-        &mut afio.mapr,
-        Config::default().baudrate(115200.bps()),
-        clocks,
-        &mut rcc.apb1,
-    )
-    .split();
+    let (mut stdout, mut stdin) = bluepill::serial::Serial::with_usart(p.device.USART1)
+        .pins(gpioa.pa9, gpioa.pa10) //映射到引脚
+        .cr(&mut gpioa.crh) //配置GPIO控制寄存器
+        .clocks(clocks) //时钟
+        .afio_mapr(&mut afio.mapr) //复用重映射即寄存器
+        .bus(&mut rcc.apb2) //配置内核总线
+        .build()
+        .split();
+    let (mut tx2, mut rx2) = bluepill::serial::Serial::with_usart(p.device.USART2)
+        .pins(gpioa.pa2, gpioa.pa3)
+        .cr(&mut gpioa.crl)
+        .clocks(clocks)
+        .afio_mapr(&mut afio.mapr)
+        .bus(&mut rcc.apb1)
+        .build()
+        .split();
+
     stdin.listen();
     rx2.listen();
 
@@ -85,42 +78,42 @@ fn main() -> ! {
     }
 }
 
-#[interrupt]
-fn USART1() {
-    cortex_m::interrupt::free(|_| unsafe {
-        if let Some(stdin) = STDIN.as_mut() {
-            match nb::block!(stdin.read()) {
-                Ok(w) => {
-                    if let Some(tx2) = TX2.as_mut() {
-                        tx2.write(w).ok();
-                    }
-                }
-                Err(e) => {
-                    if let Some(stdout) = STDOUT.as_mut() {
-                        stdout.write_fmt(format_args!("ERROR {:?}", e));
-                    }
-                }
-            }
-        }
-    })
-}
+// #[interrupt]
+// fn USART1() {
+//     cortex_m::interrupt::free(|_| unsafe {
+//         if let Some(stdin) = STDIN.as_mut() {
+//             match nb::block!(stdin.read()) {
+//                 Ok(w) => {
+//                     if let Some(tx2) = TX2.as_mut() {
+//                         tx2.write(w).ok();
+//                     }
+//                 }
+//                 Err(e) => {
+//                     if let Some(stdout) = STDOUT.as_mut() {
+//                         stdout.write_fmt(format_args!("ERROR {:?}", e));
+//                     }
+//                 }
+//             }
+//         }
+//     })
+// }
 
-#[interrupt]
-fn USART2() {
-    cortex_m::interrupt::free(|_| unsafe {
-        if let Some(rx2) = RX2.as_mut() {
-            match nb::block!(rx2.read()) {
-                Ok(w) => {
-                    if let Some(stdout) = STDOUT.as_mut() {
-                        stdout.write(w).ok();
-                    }
-                }
-                Err(e) => {
-                    if let Some(stdout) = STDOUT.as_mut() {
-                        stdout.write_fmt(format_args!("ERROR {:?}", e));
-                    }
-                }
-            }
-        }
-    })
-}
+// #[interrupt]
+// fn USART2() {
+//     cortex_m::interrupt::free(|_| unsafe {
+//         if let Some(rx2) = RX2.as_mut() {
+//             match nb::block!(rx2.read()) {
+//                 Ok(w) => {
+//                     if let Some(stdout) = STDOUT.as_mut() {
+//                         stdout.write(w).ok();
+//                     }
+//                 }
+//                 Err(e) => {
+//                     if let Some(stdout) = STDOUT.as_mut() {
+//                         stdout.write_fmt(format_args!("ERROR {:?}", e));
+//                     }
+//                 }
+//             }
+//         }
+//     })
+// }

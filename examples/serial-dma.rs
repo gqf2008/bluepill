@@ -12,7 +12,7 @@ use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::{
     pac::interrupt,
     pac::Interrupt,
-    pac::{USART1, USART2},
+    pac::USART1,
     prelude::*,
     serial::{Config, Rx, Serial, Tx},
 };
@@ -46,18 +46,14 @@ fn main() -> ! {
     let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
     let mut led = Led(gpioc.pc13).ppo(&mut gpioc.crh); //配置LED
 
-    let (mut stdout, mut stdin) = bluepill::hal::serial::Serial::usart1(
-        p.device.USART1,
-        (
-            gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh),
-            gpioa.pa10,
-        ),
-        &mut afio.mapr,
-        Config::default().baudrate(115200.bps()),
-        clocks,
-        &mut rcc.apb2,
-    )
-    .split();
+    let (mut stdout, mut stdin) = bluepill::serial::Serial::with_usart(p.device.USART1)
+        .pins(gpioa.pa9, gpioa.pa10) //映射到引脚
+        .cr(&mut gpioa.crh) //配置GPIO控制寄存器
+        .clocks(clocks) //时钟
+        .afio_mapr(&mut afio.mapr) //复用重映射即寄存器
+        .bus(&mut rcc.apb2) //配置内核总线
+        .build()
+        .split();
     let mut rx = stdin.with_dma(channels.5);
     read_dma1(&mut stdout, rx);
     loop {}
@@ -122,40 +118,4 @@ fn read_dma(stdout: &mut Tx<USART1>, rx: RxDma<Rx<USART1>, C5>) {
         buf = out;
         //led.toggle();
     }
-}
-
-static RX2: Mutex<RefCell<Option<Rx<USART2>>>> = Mutex::new(RefCell::new(None));
-static mut Q: Queue<Message, 4096> = Queue::new();
-
-#[derive(Debug)]
-enum Message {
-    Byte(u8),
-    Error(bluepill::hal::serial::Error),
-}
-#[interrupt]
-unsafe fn USART2() {
-    static mut RX: Option<Rx<USART2>> = None;
-    let mut producer = unsafe { Q.split().0 };
-
-    let rx2 = RX.get_or_insert_with(|| {
-        cortex_m::interrupt::free(|cs| RX2.borrow(cs).replace(None).unwrap())
-    });
-
-    // let queue = QUEUE.get_or_insert_with(|| {
-    //     cortex_m::interrupt::free(|cs| STREAM.borrow(cs).replace(None).unwrap())
-    // });
-    let msg = match nb::block!(rx2.read()) {
-        Ok(w) => Message::Byte(w),
-        Err(e) => Message::Error(e),
-    };
-    producer.enqueue(msg).ok();
-    // cortex_m::interrupt::free(|cs| {
-    //     if let Some(rx2) = RX2.as_mut() {
-    //         let msg = match nb::block!(rx2.read()) {
-    //             Ok(w) => Message::Byte(w),
-    //             Err(e) => Message::Error(e),
-    //         };
-    //         STREAM.borrow(cs).borrow_mut().enqueue(msg).ok();
-    //     }
-    // })
 }

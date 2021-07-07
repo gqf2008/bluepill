@@ -33,7 +33,7 @@ where
     fn read(&mut self) -> nb::Result<u8, Self::Error> {
         match self.0.read() {
             Ok(b) => Ok(b),
-            Err(err) => return Err(nb::Error::Other(Error::ReadError)),
+            Err(_err) => return Err(nb::Error::Other(Error::ReadError)),
         }
     }
 }

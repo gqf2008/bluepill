@@ -61,7 +61,7 @@ where
                 Err(nb::Error::WouldBlock) => {
                     timeout += 1;
                 }
-                Err(nb::Error::Other(e)) => {
+                Err(nb::Error::Other(_e)) => {
                     return Err(Error::ReadError);
                 }
                 Ok(b) => {
@@ -106,7 +106,7 @@ where
                 Err(nb::Error::WouldBlock) => {
                     timeout += 1;
                 }
-                Err(err) => return Err(Error::ReadError),
+                Err(_err) => return Err(Error::ReadError),
             }
             match self.1.wait() {
                 Err(nb::Error::Other(_e)) => {
@@ -145,7 +145,7 @@ pub trait BufRead: embedded_hal::serial::Read<u8> {
                         break;
                     }
                 }
-                Err(err) => return Err(Error::ReadError),
+                Err(_err) => return Err(Error::ReadError),
             }
         }
 
@@ -159,7 +159,7 @@ pub trait BufRead: embedded_hal::serial::Read<u8> {
                     *b = r;
                     Ok(())
                 }
-                Err(err) => return Err(Error::ReadError),
+                Err(_err) => return Err(Error::ReadError),
             })
     }
 }

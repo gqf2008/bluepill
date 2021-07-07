@@ -963,9 +963,8 @@ dependencies = [
 [[package]]
 name = "stm32f1xx-hal"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf679de34580d2f8806d9a6384c110b6df002404e1ff024cf8d567c91df4d4b2"
 dependencies = [
+ "bxcan",
  "cast",
  "cortex-m 0.6.7",
  "cortex-m-rt",

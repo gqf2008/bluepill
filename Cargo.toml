@@ -24,7 +24,7 @@ cipher = "0.3"
 des = "0.7.0"
 rsa = { version = "0.4.0", default-features = false, features=["alloc"]}
 rand = { version = "0.8.3", default-features = false, features=["alloc"]}
-heapless = "0.7.1"
+heapless = "0.7.3"
 ssd1306 = "0.6.0"
 embedded-graphics = "0.7.1"
 tinybmp = "0.3.1"

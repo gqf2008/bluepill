@@ -62,8 +62,8 @@ fn main() -> ! {
     let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
     let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
 
-    //let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
-    //let mut led = Led(gpioc.pc13).ppo(&mut gpioc.crh); //配置LED
+    let mut delay = Delay::new(p.core.SYST, clocks); //配置延时器
+
     let (mut stdout, _) = bluepill::serial::Serial::with_usart(p.device.USART1)
         .pins(gpioa.pa9, gpioa.pa10) //映射到引脚
         .cr(&mut gpioa.crh) //配置GPIO控制寄存器
@@ -115,8 +115,7 @@ fn main() -> ! {
         }
 
         sprint!(buf.as_str());
-        timer.start(5000);
-        nb::block!(timer.wait()).ok();
+        delay.delay_ms(5000u32);
     }
 }
 

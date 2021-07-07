@@ -12,12 +12,11 @@ use crate::hal::serial::{Config, StopBits};
 use crate::hal::serial::{Rx, Tx};
 use crate::hal::time::U32Ext;
 
-use core::borrow::BorrowMut;
 use core::cell::RefCell;
 use core::convert::Infallible;
 use cortex_m::interrupt::Mutex;
 use embedded_hal::serial::{Read, Write};
-use heapless::spsc::Queue;
+use heapless::mpmc::MpMcQueue;
 
 pub struct Serial<'a, USART, PINx, PINy, BUS, CR> {
     usart: USART,
@@ -221,10 +220,8 @@ macro_rules! rw {
             {
                 let (tx, mut rx) = serial.split();
                 rx.listen();
-                let q: Queue<u8, 4096> = Queue::new();
                 cortex_m::interrupt::free(|cs| {
                     $RXX.borrow(cs).replace(Some(rx));
-                    unsafe { $BUFX.replace(q) };
                 });
                 crate::enable_interrupt(crate::hal::pac::Interrupt::$USARTX);
                 Self { tx }
@@ -246,18 +243,12 @@ macro_rules! rw {
         impl Read<u8> for RW<Tx<$USARTX>> {
             type Error = crate::io::Error;
             fn read(&mut self) -> nb::Result<u8, Self::Error> {
-                match unsafe { $BUFX.as_mut() } {
-                    Some(q) => match q.split().1.dequeue() {
-                        Some(w) => {
-                            Ok(w)
-                        },
-                        None => {
-                            //crate::sprintln!("WouldBlock");
-                            Err(nb::Error::WouldBlock)
-                        },
+                match $BUFX.dequeue() {
+                    Some(w) => {
+                        Ok(w)
                     },
                     None => {
-                        Err(nb::Error::Other(crate::io::Error::NoIoDevice))
+                        Err(nb::Error::WouldBlock)
                     },
                 }
             }
@@ -273,11 +264,11 @@ rw! {
 }
 
 static RX1: Mutex<RefCell<Option<Rx<USART1>>>> = Mutex::new(RefCell::new(None));
-static mut TX1_BUFFER: Option<Queue<u8, 4096>> = None;
+static TX1_BUFFER: MpMcQueue<u8, 248> = MpMcQueue::new();
 static RX2: Mutex<RefCell<Option<Rx<USART2>>>> = Mutex::new(RefCell::new(None));
-static mut TX2_BUFFER: Option<Queue<u8, 4096>> = None;
+static TX2_BUFFER: MpMcQueue<u8, 248> = MpMcQueue::new();
 static RX3: Mutex<RefCell<Option<Rx<USART3>>>> = Mutex::new(RefCell::new(None));
-static mut TX3_BUFFER: Option<Queue<u8, 4096>> = None;
+static TX3_BUFFER: MpMcQueue<u8, 248> = MpMcQueue::new();
 
 #[interrupt]
 unsafe fn USART1() {
@@ -287,12 +278,8 @@ unsafe fn USART1() {
         cortex_m::interrupt::free(|cs| RX1.borrow(cs).replace(None).unwrap())
     });
     if let Ok(w) = nb::block!(rx.read()) {
-        cortex_m::interrupt::free(|cs| {
-            if let Some(buf) = TX1_BUFFER.as_mut() {
-                buf.enqueue(w).ok();
-                crate::sprintln!("TX1_BUFFER {}", w);
-            }
-        })
+        TX1_BUFFER.enqueue(w).ok();
+        crate::sprintln!("TX1_BUFFER {}", w);
     }
 }
 
@@ -304,14 +291,8 @@ unsafe fn USART2() {
         cortex_m::interrupt::free(|cs| RX2.borrow(cs).replace(None).unwrap())
     });
     if let Ok(w) = nb::block!(rx.read()) {
-        crate::sprintln!("TX2_BUFFER interrupt");
-        if let Some(buf) = TX2_BUFFER.as_mut() {
-            crate::sprintln!("TX2_BUFFER enqueue {}", w);
-            buf.split().0.enqueue(w).ok();
-            crate::sprintln!("TX2_BUFFER enqueue {}", w);
-        } else {
-            crate::sprintln!("TX2_BUFFER not found");
-        }
+        TX2_BUFFER.enqueue(w).ok();
+        crate::sprintln!("TX2_BUFFER {}", w);
     }
 }
 
@@ -323,11 +304,7 @@ unsafe fn USART3() {
         cortex_m::interrupt::free(|cs| RX3.borrow(cs).replace(None).unwrap())
     });
     if let Ok(w) = nb::block!(rx.read()) {
-        cortex_m::interrupt::free(|cs| {
-            if let Some(buf) = TX3_BUFFER.as_mut() {
-                buf.enqueue(w).ok();
-                crate::sprintln!("TX3_BUFFER {}", w);
-            }
-        })
+        TX3_BUFFER.enqueue(w).ok();
+        crate::sprintln!("TX3_BUFFER {}", w);
     }
 }

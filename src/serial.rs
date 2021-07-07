@@ -246,22 +246,20 @@ macro_rules! rw {
         impl Read<u8> for RW<Tx<$USARTX>> {
             type Error = crate::io::Error;
             fn read(&mut self) -> nb::Result<u8, Self::Error> {
-                cortex_m::interrupt::free(|cs| {
-                    match unsafe { $BUFX.as_mut() } {
-                        Some(q) => match q.split().1.dequeue() {
-                            Some(w) => {
-                                Ok(w)
-                            },
-                            None => {
-                                //crate::sprintln!("WouldBlock");
-                                Err(nb::Error::WouldBlock)
-                            },
+                match unsafe { $BUFX.as_mut() } {
+                    Some(q) => match q.split().1.dequeue() {
+                        Some(w) => {
+                            Ok(w)
                         },
                         None => {
-                            Err(nb::Error::Other(crate::io::Error::NoIoDevice))
+                            //crate::sprintln!("WouldBlock");
+                            Err(nb::Error::WouldBlock)
                         },
-                    }
-                })
+                    },
+                    None => {
+                        Err(nb::Error::Other(crate::io::Error::NoIoDevice))
+                    },
+                }
             }
         }
         )+

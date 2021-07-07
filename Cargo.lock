@@ -264,7 +264,7 @@ version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bffa6c1454368a6aa4811ae60964c38e6996d397ff8095a8b9211b1c1f749bc"
 dependencies = [
- "cortex-m 0.6.7",
+ "cortex-m 0.7.3",
 ]
 
 [[package]]
@@ -701,7 +701,7 @@ version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d577d97d1b31268087b6dddf2470e6794ef5eee87d9dca7fcd0481695391a4c"
 dependencies = [
- "cortex-m 0.6.7",
+ "cortex-m 0.7.3",
 ]
 
 [[package]]
@@ -710,7 +710,7 @@ version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d55dedd501dfd02514646e0af4d7016ce36bc12ae177ef52056989966a1eec"
 dependencies = [
- "cortex-m 0.6.7",
+ "cortex-m 0.7.3",
  "cortex-m-semihosting",
 ]
 
@@ -963,8 +963,9 @@ dependencies = [
 [[package]]
 name = "stm32f1xx-hal"
 version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf679de34580d2f8806d9a6384c110b6df002404e1ff024cf8d567c91df4d4b2"
 dependencies = [
- "bxcan",
  "cast",
  "cortex-m 0.6.7",
  "cortex-m-rt",

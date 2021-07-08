@@ -1,6 +1,6 @@
 #![no_std]
 #![no_main]
-
+#![feature(alloc_error_handler)]
 use bluepill::clocks::*;
 use bluepill::display::ssd1306::*;
 use bluepill::display::*;
@@ -24,8 +24,25 @@ use embedded_hal::blocking::delay::DelayUs;
 use panic_halt as _;
 use tinybmp::Bmp;
 
+#[macro_use(singleton)]
+extern crate cortex_m;
+
+use alloc_cortex_m::CortexMHeap;
+
+#[global_allocator]
+static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
+/// 堆内存 8K
+const HEAP_SIZE: usize = 8192;
+
+fn init() {
+    unsafe {
+        ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE);
+    }
+}
+
 #[entry]
 fn main() -> ! {
+    init();
     let p = bluepill::Peripherals::take().unwrap();
     let mut flash = p.device.FLASH.constrain();
     let mut rcc = p.device.RCC.constrain();
@@ -106,4 +123,10 @@ fn main() -> ! {
 #[exception]
 fn HardFault(ef: &ExceptionFrame) -> ! {
     panic!("{:#?}", ef);
+}
+// 内存不足执行此处代码(调试用)
+#[alloc_error_handler]
+fn alloc_error(_layout: core::alloc::Layout) -> ! {
+    cortex_m::asm::bkpt();
+    loop {}
 }

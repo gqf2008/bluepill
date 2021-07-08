@@ -1,9 +1,11 @@
 #![no_main]
 #![no_std]
+#![feature(alloc_error_handler)]
 
 #[macro_use(singleton)]
 extern crate cortex_m;
 
+use alloc_cortex_m::CortexMHeap;
 use bluepill::clocks::*;
 use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
@@ -29,8 +31,20 @@ static mut STDOUT: Option<Tx<USART1>> = None;
 static mut TX2: Option<Tx<USART2>> = None;
 static mut RX2: Option<Rx<USART2>> = None;
 
+#[global_allocator]
+static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
+/// 堆内存 8K
+const HEAP_SIZE: usize = 8192;
+
+fn init() {
+    unsafe {
+        ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE);
+    }
+}
+
 #[entry]
 fn main() -> ! {
+    init();
     let p = bluepill::Peripherals::take().unwrap(); //核心设备、外围设备
     let mut flash = p.device.FLASH.constrain(); //Flash
     let mut rcc = p.device.RCC.constrain(); //RCC
@@ -78,42 +92,49 @@ fn main() -> ! {
     }
 }
 
-// #[interrupt]
-// fn USART1() {
-//     cortex_m::interrupt::free(|_| unsafe {
-//         if let Some(stdin) = STDIN.as_mut() {
-//             match nb::block!(stdin.read()) {
-//                 Ok(w) => {
-//                     if let Some(tx2) = TX2.as_mut() {
-//                         tx2.write(w).ok();
-//                     }
-//                 }
-//                 Err(e) => {
-//                     if let Some(stdout) = STDOUT.as_mut() {
-//                         stdout.write_fmt(format_args!("ERROR {:?}", e));
-//                     }
-//                 }
-//             }
-//         }
-//     })
-// }
+//#[interrupt]
+fn USART1() {
+    cortex_m::interrupt::free(|_| unsafe {
+        if let Some(stdin) = STDIN.as_mut() {
+            match nb::block!(stdin.read()) {
+                Ok(w) => {
+                    if let Some(tx2) = TX2.as_mut() {
+                        tx2.write(w).ok();
+                    }
+                }
+                Err(e) => {
+                    if let Some(stdout) = STDOUT.as_mut() {
+                        stdout.write_fmt(format_args!("ERROR {:?}", e));
+                    }
+                }
+            }
+        }
+    })
+}
 
-// #[interrupt]
-// fn USART2() {
-//     cortex_m::interrupt::free(|_| unsafe {
-//         if let Some(rx2) = RX2.as_mut() {
-//             match nb::block!(rx2.read()) {
-//                 Ok(w) => {
-//                     if let Some(stdout) = STDOUT.as_mut() {
-//                         stdout.write(w).ok();
-//                     }
-//                 }
-//                 Err(e) => {
-//                     if let Some(stdout) = STDOUT.as_mut() {
-//                         stdout.write_fmt(format_args!("ERROR {:?}", e));
-//                     }
-//                 }
-//             }
-//         }
-//     })
-// }
+//#[interrupt]
+fn USART2() {
+    cortex_m::interrupt::free(|_| unsafe {
+        if let Some(rx2) = RX2.as_mut() {
+            match nb::block!(rx2.read()) {
+                Ok(w) => {
+                    if let Some(stdout) = STDOUT.as_mut() {
+                        stdout.write(w).ok();
+                    }
+                }
+                Err(e) => {
+                    if let Some(stdout) = STDOUT.as_mut() {
+                        stdout.write_fmt(format_args!("ERROR {:?}", e));
+                    }
+                }
+            }
+        }
+    })
+}
+
+// 内存不足执行此处代码(调试用)
+#[alloc_error_handler]
+fn alloc_error(_layout: core::alloc::Layout) -> ! {
+    cortex_m::asm::bkpt();
+    loop {}
+}

@@ -1,7 +1,7 @@
 use crate::io::{self, *};
+use alloc::string::String;
 use core::fmt::{self, Write};
 use cortex_m::interrupt;
-use heapless::String;
 
 use stm32f1xx_hal::pac::USART1;
 use stm32f1xx_hal::serial::{Rx, Tx};
@@ -52,7 +52,7 @@ where
     }
 }
 
-pub fn read_line<const N: usize>() -> io::Result<String<N>> {
+pub fn read_line<const N: usize>() -> io::Result<String> {
     interrupt::free(|_| unsafe {
         if let Some(stdin) = STDIN.as_mut() {
             stdin.read_line()

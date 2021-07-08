@@ -6,7 +6,6 @@ extern crate alloc;
 
 use alloc::format;
 use alloc::string::ToString;
-use alloc_cortex_m::CortexMHeap;
 use bluepill::clocks::*;
 use bluepill::display::ssd1306::*;
 use bluepill::hal::{
@@ -40,18 +39,25 @@ use embedded_hal::digital::v2::{InputPin, OutputPin};
 use panic_halt as _;
 use tinybmp::Bmp;
 
-/// 堆内存分配器
+#[macro_use(singleton)]
+extern crate cortex_m;
+
+use alloc_cortex_m::CortexMHeap;
+
 #[global_allocator]
 static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
 /// 堆内存 8K
 const HEAP_SIZE: usize = 8192;
 
-#[entry]
-fn main() -> ! {
+fn init() {
     unsafe {
         ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE);
     }
+}
 
+#[entry]
+fn main() -> ! {
+    init();
     let p = bluepill::Peripherals::take().unwrap(); //核心设备、外围设备
     let mut flash = p.device.FLASH.constrain(); //Flash
     let mut rcc = p.device.RCC.constrain(); //RCC

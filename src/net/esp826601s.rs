@@ -22,7 +22,7 @@
 
 use crate::hal::time::Hertz;
 use crate::io::{Error, Result, TimeoutReader};
-use heapless::String;
+use alloc::string::String;
 
 const OK: &str = "OK";
 const ERROR: &str = "ERROR";
@@ -41,63 +41,63 @@ where
         Self { port, timer }
     }
 
-    pub fn hello(&mut self) -> Result<String<256>> {
-        self.request("AT\r\n", 5000)
+    pub fn hello(&mut self) -> Result<String> {
+        self.request(b"AT\r\n", 5000)
     }
 
-    pub fn device_info(&mut self) -> Result<String<256>> {
-        self.request("AT+GMR\r\n", 5000)
+    pub fn device_info(&mut self) -> Result<String> {
+        self.request(b"AT+GMR\r\n", 5000)
     }
 
     //重置
-    pub fn reset(&mut self) -> Result<String<256>> {
-        self.request("AT+RST\r\n", 5000)
+    pub fn reset(&mut self) -> Result<String> {
+        self.request(b"AT+RST\r\n", 5000)
     }
 
     //恢复出厂设置
-    pub fn restore(&mut self) -> Result<String<256>> {
-        self.request("AT+RESTORE\r\n", 5000)
+    pub fn restore(&mut self) -> Result<String> {
+        self.request(b"AT+RESTORE\r\n", 5000)
     }
 
     //连接AP
-    pub fn dial(&mut self, ssid: &str, password: &str, autoconnect: bool) -> Result<String<256>> {
-        let mut cmd: String<128> = String::from("AT+CWJAP_DEF=\"");
-        cmd.push_str(ssid).ok();
-        cmd.push_str("\",\"").ok();
-        cmd.push_str(password).ok();
-        cmd.push_str("\"\r\n").ok();
-        let reply = self.request(cmd.as_str(), 15000)?;
+    pub fn dial(&mut self, ssid: &str, password: &str, autoconnect: bool) -> Result<String> {
+        let mut cmd = String::from("AT+CWJAP_DEF=\"");
+        cmd.push_str(ssid);
+        cmd.push_str("\",\"");
+        cmd.push_str(password);
+        cmd.push_str("\"\r\n");
+        let reply = self.request(cmd.as_bytes(), 15000)?;
         if autoconnect {
-            self.request("AT+CWAUTOCONN=1\r\n", 5000)?;
+            self.request(b"AT+CWAUTOCONN=1\r\n", 5000)?;
         } else {
-            self.request("AT+CWAUTOCONN=0\r\n", 5000)?;
+            self.request(b"AT+CWAUTOCONN=0\r\n", 5000)?;
         }
 
         Ok(reply)
     }
 
     //断开与AP的连接
-    pub fn hangup(&mut self) -> Result<String<256>> {
-        self.request("AT+CWQAP\r\n", 5000)
+    pub fn hangup(&mut self) -> Result<String> {
+        self.request(b"AT+CWQAP\r\n", 5000)
     }
 
     #[inline]
-    fn request(&mut self, cmd: &str, timeout: u32) -> Result<String<256>> {
-        self.write_exact(cmd.as_bytes()).ok();
-        let mut buf: String<256> = String::new();
+    fn request(&mut self, cmd: &[u8], timeout: u32) -> Result<String> {
+        self.write_exact(cmd).ok();
+        let mut buf = String::new();
         let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
         loop {
-            match reader.read_line::<256>(timeout)? {
+            match reader.read_line(timeout)? {
                 line if line.starts_with(OK) => {
-                    buf.push_str(line.as_str()).ok();
+                    buf.push_str(line.as_str());
                     return Ok(buf);
                 }
                 line if line.starts_with(ERROR) => {
-                    buf.push_str(line.as_str()).ok();
+                    buf.push_str(line.as_str());
                     return Err(Error::Other(buf));
                 }
                 line => {
-                    buf.push_str(line.as_str()).ok();
+                    buf.push_str(line.as_str());
                 }
             }
         }
@@ -105,41 +105,41 @@ where
 
     /////////////////////////////////////////////////////////////
 
-    pub fn ifconfig(&mut self) -> Result<String<256>> {
-        self.request("AT+CIFSR\r\n", 5000)
+    pub fn ifconfig(&mut self) -> Result<String> {
+        self.request(b"AT+CIFSR\r\n", 5000)
     }
 
-    pub fn ping(&mut self, domain: &str) -> Result<String<256>> {
+    pub fn ping(&mut self, domain: &str) -> Result<String> {
         //AT+PING="www.shouqianba.com"
-        let mut cmd: String<128> = String::from("AT+PING=\"");
-        cmd.push_str(domain).ok();
-        cmd.push_str("\"\r\n").ok();
-        self.request(cmd.as_str(), 5000)
+        let mut cmd = String::from("AT+PING=\"");
+        cmd.push_str(domain);
+        cmd.push_str("\"\r\n");
+        self.request(cmd.as_bytes(), 5000)
     }
 
-    pub fn reslove(&mut self, domain: &str) -> Result<String<256>> {
-        let mut cmd: String<128> = String::from("AT+CIPDOMAIN=\"");
-        cmd.push_str(domain).ok();
-        cmd.push_str("\"\r\n").ok();
-        self.request(cmd.as_str(), 5000)
+    pub fn reslove(&mut self, domain: &str) -> Result<String> {
+        let mut cmd = String::from("AT+CIPDOMAIN=\"");
+        cmd.push_str(domain);
+        cmd.push_str("\"\r\n");
+        self.request(cmd.as_bytes(), 5000)
     }
 
-    pub fn net_state(&mut self) -> Result<String<256>> {
-        self.request("AT+CIPSTATUS\r\n", 5000)
+    pub fn net_state(&mut self) -> Result<String> {
+        self.request(b"AT+CIPSTATUS\r\n", 5000)
     }
 
-    pub fn connect(&mut self, addr: (&str, &str)) -> Result<String<256>> {
+    pub fn connect(&mut self, addr: (&str, &str)) -> Result<String> {
         //AT+CIPSTART="TCP","iot.espressif.cn",8000 建立TCP连接
-        let mut cmd: String<128> = String::from("AT+CIPSTART=\"TCP\",\"");
-        cmd.push_str(addr.0).ok();
-        cmd.push_str("\",").ok();
-        cmd.push_str(addr.1).ok();
-        cmd.push_str("\r\n").ok();
-        self.request(cmd.as_str(), 15000)
+        let mut cmd = String::from("AT+CIPSTART=\"TCP\",\"");
+        cmd.push_str(addr.0);
+        cmd.push_str("\",");
+        cmd.push_str(addr.1);
+        cmd.push_str("\r\n");
+        self.request(cmd.as_bytes(), 15000)
     }
 
-    pub fn disconnect(&mut self) -> Result<String<256>> {
-        self.request("AT+CIPCLOSE", 5000)
+    pub fn disconnect(&mut self) -> Result<String> {
+        self.request(b"AT+CIPCLOSE\r\n", 5000)
     }
 
     pub fn write_exact(&mut self, buf: &[u8]) -> Result<usize> {
@@ -156,10 +156,10 @@ where
     }
 
     pub fn send_data(&mut self, buf: &[u8]) -> Result<usize> {
-        let mut cmd: String<128> = String::from("AT+CIPSEND=");
-        cmd.push_str("111").ok();
-        cmd.push_str("\r\n").ok();
-        self.request(cmd.as_str(), 5000)?;
+        let mut cmd = String::from("AT+CIPSEND=");
+        cmd.push_str("111");
+        cmd.push_str("\r\n");
+        self.request(cmd.as_bytes(), 5000)?;
         {
             let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
             let mut reply = [0; 1];
@@ -169,7 +169,7 @@ where
         self.write_exact(buf)?;
         let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
         loop {
-            match reader.read_line::<256>(5000)? {
+            match reader.read_line(5000)? {
                 line if line.starts_with("SEND  OK") => return Ok(buf.len()),
                 line if line.starts_with("SEND	FAIL") || line.starts_with("ERROR") => {
                     return Err(Error::WriteError)

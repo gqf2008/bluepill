@@ -93,7 +93,7 @@ fn main() -> ! {
         let mut buf: String<256> = String::new();
         let mut read_reply = |timeout| loop {
             let mut reader = TimeoutReader(&mut rx, &mut timer);
-            match reader.read_line::<64>(timeout) {
+            match reader.read_line(timeout) {
                 Ok(line) => {
                     buf.push_str(line.as_str()).ok();
                     if line.starts_with("OK") || line.starts_with("ERROR") {

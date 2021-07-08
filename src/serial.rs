@@ -12,11 +12,11 @@ use crate::hal::serial::{Config, StopBits};
 use crate::hal::serial::{Rx, Tx};
 use crate::hal::time::U32Ext;
 
+use alloc::collections::VecDeque;
 use core::cell::RefCell;
 use core::convert::Infallible;
 use cortex_m::interrupt::Mutex;
 use embedded_hal::serial::{Read, Write};
-use heapless::mpmc::MpMcQueue;
 
 pub struct Serial<'a, USART, PINx, PINy, BUS, CR> {
     usart: USART,
@@ -127,7 +127,6 @@ macro_rules! serial {
                     self,
                 ) -> RW<Tx<$USARTX>> {
                     let my = self.build();
-                    crate::sprintln!("new rw");
                     RW::<Tx<$USARTX>>::new(my)
                 }
             }
@@ -220,8 +219,9 @@ macro_rules! rw {
             {
                 let (tx, mut rx) = serial.split();
                 rx.listen();
-                cortex_m::interrupt::free(|cs| {
-                    $RXX.borrow(cs).replace(Some(rx));
+                cortex_m::interrupt::free(|cs| unsafe{
+                    $RXX.replace(rx);
+                    $BUFX.borrow(cs).replace(Some(VecDeque::with_capacity(64)));
                 });
                 crate::enable_interrupt(crate::hal::pac::Interrupt::$USARTX);
                 Self { tx }
@@ -243,14 +243,21 @@ macro_rules! rw {
         impl Read<u8> for RW<Tx<$USARTX>> {
             type Error = crate::io::Error;
             fn read(&mut self) -> nb::Result<u8, Self::Error> {
-                match $BUFX.dequeue() {
-                    Some(w) => {
-                        Ok(w)
-                    },
-                    None => {
-                        Err(nb::Error::WouldBlock)
-                    },
-                }
+                cortex_m::interrupt::free(|cs| {
+                    match $BUFX.borrow(cs).borrow_mut().deref_mut() {
+                        Some(buf) => {
+                            match buf.pop_front() {
+                                Some(w) => {
+                                    return Ok(w);
+                                }
+                                None => {
+                                    return Err(nb::Error::WouldBlock);
+                                }
+                            }
+                        }
+                        None => return Err(nb::Error::Other(crate::io::Error::NoIoDevice)),
+                    }
+                })
             }
         }
         )+
@@ -263,48 +270,55 @@ rw! {
     USART3:(RX3, TX3_BUFFER),
 }
 
-static RX1: Mutex<RefCell<Option<Rx<USART1>>>> = Mutex::new(RefCell::new(None));
-static TX1_BUFFER: MpMcQueue<u8, 248> = MpMcQueue::new();
-static RX2: Mutex<RefCell<Option<Rx<USART2>>>> = Mutex::new(RefCell::new(None));
-static TX2_BUFFER: MpMcQueue<u8, 248> = MpMcQueue::new();
-static RX3: Mutex<RefCell<Option<Rx<USART3>>>> = Mutex::new(RefCell::new(None));
-static TX3_BUFFER: MpMcQueue<u8, 248> = MpMcQueue::new();
+static mut RX1: Option<Rx<USART1>> = None;
+static TX1_BUFFER: Mutex<RefCell<Option<VecDeque<u8>>>> = Mutex::new(RefCell::new(None));
+
+static mut RX2: Option<Rx<USART2>> = None;
+static TX2_BUFFER: Mutex<RefCell<Option<VecDeque<u8>>>> = Mutex::new(RefCell::new(None));
+
+static mut RX3: Option<Rx<USART3>> = None;
+static TX3_BUFFER: Mutex<RefCell<Option<VecDeque<u8>>>> = Mutex::new(RefCell::new(None));
 
 #[interrupt]
 unsafe fn USART1() {
-    crate::sprintln!("USART1");
-    static mut RX: Option<Rx<USART1>> = None;
-    let rx = RX.get_or_insert_with(|| {
-        cortex_m::interrupt::free(|cs| RX1.borrow(cs).replace(None).unwrap())
-    });
-    if let Ok(w) = nb::block!(rx.read()) {
-        TX1_BUFFER.enqueue(w).ok();
-        crate::sprintln!("TX1_BUFFER {}", w);
+    if let Some(rx) = RX1.as_mut() {
+        if let Ok(w) = nb::block!(rx.read()) {
+            cortex_m::interrupt::free(|cs| {
+                if let Some(buf) = TX1_BUFFER.borrow(cs).borrow_mut().deref_mut() {
+                    buf.push_back(w);
+                }
+            });
+        }
     }
 }
 
+use core::ops::DerefMut;
 #[interrupt]
 unsafe fn USART2() {
-    crate::sprintln!("USART2");
-    static mut RX: Option<Rx<USART2>> = None;
-    let rx = RX.get_or_insert_with(|| {
-        cortex_m::interrupt::free(|cs| RX2.borrow(cs).replace(None).unwrap())
-    });
-    if let Ok(w) = nb::block!(rx.read()) {
-        TX2_BUFFER.enqueue(w).ok();
-        crate::sprintln!("TX2_BUFFER {}", w);
+    // static mut RX: Option<Rx<USART2>> = None;
+    // let rx = RX.get_or_insert_with(|| {
+    //     cortex_m::interrupt::free(|cs| RX2.borrow(cs).replace(None).unwrap())
+    // });
+    if let Some(rx) = RX2.as_mut() {
+        if let Ok(w) = nb::block!(rx.read()) {
+            cortex_m::interrupt::free(|cs| {
+                if let Some(buf) = TX2_BUFFER.borrow(cs).borrow_mut().deref_mut() {
+                    buf.push_back(w);
+                }
+            });
+        }
     }
 }
 
 #[interrupt]
 unsafe fn USART3() {
-    crate::sprintln!("USART3");
-    static mut RX: Option<Rx<USART3>> = None;
-    let rx = RX.get_or_insert_with(|| {
-        cortex_m::interrupt::free(|cs| RX3.borrow(cs).replace(None).unwrap())
-    });
-    if let Ok(w) = nb::block!(rx.read()) {
-        TX3_BUFFER.enqueue(w).ok();
-        crate::sprintln!("TX3_BUFFER {}", w);
+    if let Some(rx) = RX3.as_mut() {
+        if let Ok(w) = nb::block!(rx.read()) {
+            cortex_m::interrupt::free(|cs| {
+                if let Some(buf) = TX3_BUFFER.borrow(cs).borrow_mut().deref_mut() {
+                    buf.push_back(w);
+                }
+            });
+        }
     }
 }

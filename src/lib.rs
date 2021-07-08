@@ -1,5 +1,6 @@
 //! STM32F103C8T6 BSP
 #![no_std]
+extern crate alloc;
 
 pub mod clocks;
 pub mod display;

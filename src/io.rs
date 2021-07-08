@@ -1,8 +1,8 @@
 use crate::hal::time::Hertz;
 use crate::hal::time::U32Ext;
+use alloc::string::String;
+use alloc::vec::Vec;
 use embedded_hal::timer::CountDown;
-use heapless::String;
-use heapless::Vec;
 
 pub type Result<T> = core::result::Result<T, crate::io::Error>;
 
@@ -12,7 +12,7 @@ pub enum Error {
     EOF,
     WriteError,
     ReadError,
-    Other(String<256>),
+    Other(String),
     BufferFull,
     NoIoDevice,
     NoNetwork,
@@ -40,51 +40,35 @@ where
     R: embedded_hal::serial::Read<u8>,
     TIM: CountDown<Time = Hertz>,
 {
-    pub fn read_line<const N: usize>(&mut self, milliseconds: u32) -> Result<String<N>> {
-        let mut str: String<N> = String::new();
+    pub fn read_line(&mut self, milliseconds: u32) -> Result<String> {
+        let mut str = String::new();
         let buf = unsafe { str.as_mut_vec() };
         self.read_until('\n' as u8, buf, milliseconds)?;
         Ok(str)
     }
 
-    pub fn read_until<const N: usize>(
-        &mut self,
-        byte: u8,
-        buf: &mut Vec<u8, N>,
-        milliseconds: u32,
-    ) -> Result<usize> {
+    pub fn read_until(&mut self, byte: u8, buf: &mut Vec<u8>, milliseconds: u32) -> Result<usize> {
         let mut read = 0;
         self.1.start(1.khz());
         let mut timeout = 0;
         loop {
             match self.0.read() {
-                Err(nb::Error::WouldBlock) => {
-                    timeout += 1;
-                }
+                Err(nb::Error::WouldBlock) => {}
                 Err(nb::Error::Other(_e)) => {
                     return Err(Error::ReadError);
                 }
                 Ok(b) => {
-                    if let Err(_e) = buf.push(b) {
-                        return Err(Error::BufferFull);
-                    }
+                    buf.push(b);
                     read += 1;
                     if byte == b {
                         return Ok(read);
                     }
                 }
             }
-            match self.1.wait() {
-                Err(nb::Error::Other(_e)) => {
-                    unreachable!()
-                }
-                Err(nb::Error::WouldBlock) => {}
-                Ok(()) => {
-                    if timeout == milliseconds {
-                        return Err(Error::Timeout);
-                    }
-                    self.1.start(1.khz());
-                }
+            nb::block!(self.1.wait()).ok();
+            timeout += 1;
+            if timeout >= milliseconds {
+                return Err(Error::Timeout);
             }
         }
     }
@@ -125,21 +109,20 @@ where
 }
 
 pub trait BufRead: embedded_hal::serial::Read<u8> {
-    fn read_line<const N: usize>(&mut self) -> Result<String<N>> {
-        let mut str: String<N> = String::new();
+    fn read_line(&mut self) -> Result<String> {
+        let mut str = String::new();
+
         let buf = unsafe { str.as_mut_vec() };
         self.read_until('\n' as u8, buf)?;
         Ok(str)
     }
 
-    fn read_until<const N: usize>(&mut self, byte: u8, buf: &mut Vec<u8, N>) -> Result<usize> {
+    fn read_until(&mut self, byte: u8, buf: &mut Vec<u8>) -> Result<usize> {
         let mut read = 0;
         loop {
             match nb::block!(self.read()) {
                 Ok(b) => {
-                    if let Err(_e) = buf.push(b) {
-                        return Err(Error::BufferFull);
-                    }
+                    buf.push(b);
                     read += 1;
                     if b == byte {
                         break;

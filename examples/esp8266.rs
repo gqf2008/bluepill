@@ -3,19 +3,23 @@
 
 #![no_main]
 #![no_std]
+#![feature(alloc_error_handler)]
 
+#[macro_use(singleton)]
+extern crate cortex_m;
+
+use alloc_cortex_m::CortexMHeap;
 use bluepill::clocks::*;
 use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
-use bluepill::*;
-
 use bluepill::hal::timer::Timer;
 use bluepill::io::*;
 use bluepill::net::esp826601s;
 use bluepill::stdio;
 use bluepill::timer::TimerBuilder;
+use bluepill::*;
 use bluepill::*;
 use core::borrow::Borrow;
 use core::cell::RefCell;
@@ -35,8 +39,20 @@ use heapless::String;
 use heapless::Vec;
 use panic_halt as _;
 
+#[global_allocator]
+static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
+/// 堆内存 8K
+const HEAP_SIZE: usize = 8192;
+
+fn init() {
+    unsafe {
+        ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE);
+    }
+}
+
 #[entry]
 fn main() -> ! {
+    init();
     let p = bluepill::Peripherals::take().unwrap(); //核心设备、外围设备
     let mut flash = p.device.FLASH.constrain(); //Flash
     let mut rcc = p.device.RCC.constrain(); //RCC
@@ -73,12 +89,13 @@ fn main() -> ! {
     sprintln!("new esp826601s");
     let mut wifi = esp826601s::Esp8266::new(port, timer);
     sprintln!("new esp826601s ok");
-    sprintln!("hello");
+    //sprintln!("hello");
     wifi.hello().ok();
-    sprintln!("hello ok");
-    sprintln!("dial");
+    //sprintln!("hello ok");
+    //sprintln!("dial");
+    wifi.hangup().ok();
     wifi.dial("Wosai-Guest", "Shouqianba$520", false).ok();
-    sprintln!("dial ok");
+    // sprintln!("dial ok");
     match wifi.device_info() {
         Ok(inf) => sprint!("{}", inf),
         Err(bluepill::io::Error::Other(err)) => sprint!("{:?}", err),
@@ -98,7 +115,13 @@ fn main() -> ! {
         if let Ok(reply) = wifi.net_state() {
             sprint!("{}", reply);
         }
-
         delay.delay_ms(5000u32);
     }
+}
+
+// 内存不足执行此处代码(调试用)
+#[alloc_error_handler]
+fn alloc_error(_layout: core::alloc::Layout) -> ! {
+    cortex_m::asm::bkpt();
+    loop {}
 }

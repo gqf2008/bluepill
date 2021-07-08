@@ -1,6 +1,6 @@
 #![no_main]
 #![no_std]
-
+#![feature(alloc_error_handler)]
 #[macro_use(singleton)]
 extern crate cortex_m;
 
@@ -30,8 +30,22 @@ use heapless::spsc::{Consumer, Producer, Queue};
 use heapless::Vec;
 use panic_halt as _;
 
+use alloc_cortex_m::CortexMHeap;
+
+#[global_allocator]
+static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
+/// 堆内存 8K
+const HEAP_SIZE: usize = 8192;
+
+fn init() {
+    unsafe {
+        ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE);
+    }
+}
+
 #[entry]
 fn main() -> ! {
+    init();
     let p = bluepill::Peripherals::take().unwrap(); //核心设备、外围设备
     let mut flash = p.device.FLASH.constrain(); //Flash
 
@@ -118,4 +132,10 @@ fn read_dma(stdout: &mut Tx<USART1>, rx: RxDma<Rx<USART1>, C5>) {
         buf = out;
         //led.toggle();
     }
+}
+// 内存不足执行此处代码(调试用)
+#[alloc_error_handler]
+fn alloc_error(_layout: core::alloc::Layout) -> ! {
+    cortex_m::asm::bkpt();
+    loop {}
 }

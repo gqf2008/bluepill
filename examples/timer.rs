@@ -108,13 +108,6 @@ fn main() -> ! {
     }
 }
 
-// 内存不足执行此处代码(调试用)
-#[alloc_error_handler]
-fn alloc_error(_layout: core::alloc::Layout) -> ! {
-    cortex_m::asm::bkpt();
-    loop {}
-}
-
 #[interrupt]
 unsafe fn TIM2() {
     static mut LED: Option<Led<PC13<Output<PushPull>>>> = None;
@@ -162,4 +155,10 @@ unsafe fn TIM1_UP() {
         // Move TIMER pin here, leaving a None in its place
         TIMER.borrow(cs).borrow_mut().as_mut().unwrap().wait().ok(); //replace(None).unwrap()
     });
+}
+// 内存不足执行此处代码(调试用)
+#[alloc_error_handler]
+fn alloc_error(_layout: core::alloc::Layout) -> ! {
+    cortex_m::asm::bkpt();
+    loop {}
 }

@@ -89,13 +89,9 @@ fn main() -> ! {
     sprintln!("new esp826601s");
     let mut wifi = esp826601s::Esp8266::new(port, timer);
     sprintln!("new esp826601s ok");
-    //sprintln!("hello");
     wifi.hello().ok();
-    //sprintln!("hello ok");
-    //sprintln!("dial");
     wifi.hangup().ok();
     wifi.dial("Wosai-Guest", "Shouqianba$520", false).ok();
-    // sprintln!("dial ok");
     match wifi.device_info() {
         Ok(inf) => sprint!("{}", inf),
         Err(bluepill::io::Error::Other(err)) => sprint!("{:?}", err),

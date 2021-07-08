@@ -22,10 +22,12 @@
 
 use crate::hal::time::Hertz;
 use crate::io::{Error, Result, TimeoutReader};
+use alloc::format;
 use alloc::string::String;
 
 const OK: &str = "OK";
 const ERROR: &str = "ERROR";
+const BUSY: &str = "busy";
 
 pub struct Esp8266<T, TIM> {
     port: T,
@@ -40,11 +42,11 @@ where
     pub fn new(port: T, timer: TIM) -> Self {
         Self { port, timer }
     }
-
+    //打个招呼
     pub fn hello(&mut self) -> Result<String> {
         self.request(b"AT\r\n", 5000)
     }
-
+    //设备信息
     pub fn device_info(&mut self) -> Result<String> {
         self.request(b"AT+GMR\r\n", 5000)
     }
@@ -96,7 +98,13 @@ where
                     buf.push_str(line.as_str());
                     return Err(Error::Other(buf));
                 }
+                line if line.starts_with(BUSY) => {
+                    return self.request(cmd, timeout);
+                    // buf.push_str(line.as_str());
+                    // return Err(Error::DeviceBusy);
+                }
                 line => {
+                    crate::sprint!(line.as_str());
                     buf.push_str(line.as_str());
                 }
             }
@@ -106,7 +114,10 @@ where
     /////////////////////////////////////////////////////////////
 
     pub fn ifconfig(&mut self) -> Result<String> {
-        self.request(b"AT+CIFSR\r\n", 5000)
+        let mut reply1 = self.request(b"AT+CIFSR\r\n", 5000)?;
+        let reply2 = self.request(b"AT+CIPSTA_CUR?\r\n", 5000)?;
+        reply1.push_str(reply2.as_str());
+        Ok(reply1)
     }
 
     pub fn ping(&mut self, domain: &str) -> Result<String> {
@@ -149,15 +160,15 @@ where
         Ok(buf.len())
     }
 
-    pub fn read_exact<const N: usize>(&mut self, buf: &mut [u8], timeout: u32) -> Result<()> {
-        let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
-        reader.read_exact(buf, timeout)?;
-        Ok(())
-    }
+    // pub fn read_exact<const N: usize>(&mut self, buf: &mut [u8], timeout: u32) -> Result<()> {
+    //     let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
+    //     reader.read_exact(buf, timeout)?;
+    //     Ok(())
+    // }
 
     pub fn send_data(&mut self, buf: &[u8]) -> Result<usize> {
         let mut cmd = String::from("AT+CIPSEND=");
-        cmd.push_str("111");
+        cmd.push_str(format!("{}", buf.len()).as_str());
         cmd.push_str("\r\n");
         self.request(cmd.as_bytes(), 5000)?;
         {
@@ -166,20 +177,26 @@ where
             //read '>'
             reader.read_exact(&mut reply, 5000)?;
         }
+        // self.request(cmd.as_bytes(), 5000)?;
         self.write_exact(buf)?;
         let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
         loop {
             match reader.read_line(5000)? {
-                line if line.starts_with("SEND  OK") => return Ok(buf.len()),
-                line if line.starts_with("SEND	FAIL") || line.starts_with("ERROR") => {
+                line if line.starts_with("SEND OK") || line.starts_with("OK") => {
+                    return Ok(buf.len())
+                }
+                line if line.starts_with("SEND FAIL") || line.starts_with("ERROR") => {
                     return Err(Error::WriteError)
                 }
                 _ => {}
             }
         }
     }
-    pub fn read_data(&mut self, buf: &mut [u8]) -> Result<usize> {
+    pub fn read_data(&mut self, len: usize) -> Result<String> {
         //AT+CIPRECVDATA=<len>
-        todo!()
+        let mut cmd = String::from("AT+CIPSEND=");
+        cmd.push_str(format!("{}", len).as_str());
+        cmd.push_str("\r\n");
+        self.request(cmd.as_bytes(), 5000)
     }
 }

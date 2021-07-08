@@ -89,9 +89,9 @@ fn main() -> ! {
     sprintln!("new esp826601s");
     let mut wifi = esp826601s::Esp8266::new(port, timer);
     sprintln!("new esp826601s ok");
-    wifi.hello().ok();
-    wifi.hangup().ok();
-    wifi.dial("Wosai-Guest", "Shouqianba$520", false).ok();
+    //wifi.hello().ok();
+    // wifi.hangup().ok();
+    // wifi.dial("Wosai-Guest", "Shouqianba$520", false).ok();
     match wifi.device_info() {
         Ok(inf) => sprint!("{}", inf),
         Err(bluepill::io::Error::Other(err)) => sprint!("{:?}", err),
@@ -108,9 +108,19 @@ fn main() -> ! {
     }
 
     loop {
-        if let Ok(reply) = wifi.net_state() {
+        match wifi.connect(("172.18.61.78", "443")) {
+            Ok(reply) => {
+                sprint!("{}", reply);
+            }
+            Err(err) => sprintln!("{:?}", err),
+        }
+        if let Some(size) = wifi.send_data(b"1111111111").ok() {
+            sprintln!("sent {}", size);
+        }
+        if let Some(reply) = wifi.read_data(10).ok() {
             sprint!("{}", reply);
         }
+        wifi.disconnect().ok();
         delay.delay_ms(5000u32);
     }
 }

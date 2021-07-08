@@ -16,6 +16,7 @@ pub enum Error {
     BufferFull,
     NoIoDevice,
     NoNetwork,
+    DeviceBusy,
 }
 
 impl core::fmt::Display for Error {
@@ -29,6 +30,7 @@ impl core::fmt::Display for Error {
             Error::BufferFull => write!(f, "buffer full"),
             Error::NoIoDevice => write!(f, "no io device"),
             Error::NoNetwork => write!(f, "no network"),
+            Error::DeviceBusy => write!(f, "device is busy"),
         }
     }
 }

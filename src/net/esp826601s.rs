@@ -166,16 +166,16 @@ where
     //     Ok(())
     // }
 
-    pub fn send_data(&mut self, buf: &[u8]) -> Result<usize> {
+    pub fn send_data(&mut self, buf: &[u8], timeout: u32) -> Result<usize> {
         let mut cmd = String::from("AT+CIPSEND=");
         cmd.push_str(format!("{}", buf.len()).as_str());
         cmd.push_str("\r\n");
-        self.request(cmd.as_bytes(), 5000)?;
+        self.request(cmd.as_bytes(), timeout)?;
         {
             let mut reader = TimeoutReader(&mut self.port, &mut self.timer);
             let mut reply = [0; 1];
             //read '>'
-            reader.read_exact(&mut reply, 5000)?;
+            reader.read_exact(&mut reply, timeout)?;
         }
         // self.request(cmd.as_bytes(), 5000)?;
         self.write_exact(buf)?;
@@ -192,11 +192,11 @@ where
             }
         }
     }
-    pub fn read_data(&mut self, len: usize) -> Result<String> {
+    pub fn read_data(&mut self, len: usize, timeout: u32) -> Result<String> {
         //AT+CIPRECVDATA=<len>
         let mut cmd = String::from("AT+CIPSEND=");
         cmd.push_str(format!("{}", len).as_str());
         cmd.push_str("\r\n");
-        self.request(cmd.as_bytes(), 5000)
+        self.request(cmd.as_bytes(), timeout)
     }
 }

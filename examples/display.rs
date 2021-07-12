@@ -1,16 +1,21 @@
 #![no_std]
 #![no_main]
 #![feature(alloc_error_handler)]
+
+extern crate alloc;
+
 use bluepill::clocks::*;
 use bluepill::display::ssd1306::*;
 use bluepill::display::*;
 use bluepill::hal::{
+    adc,
     delay::Delay,
     i2c::{BlockingI2c, DutyCycle, Mode},
     prelude::*,
     stm32,
     timer::Timer,
 };
+
 use cortex_m_rt::{entry, exception, ExceptionFrame};
 use embedded_graphics::{
     image::{Image, ImageRaw},
@@ -53,7 +58,8 @@ fn main() -> ! {
     let dio = gpiob.pb7.into_open_drain_output(&mut gpiob.crl);
     let scl = gpiob.pb8.into_alternate_open_drain(&mut gpiob.crh);
     let sda = gpiob.pb9.into_alternate_open_drain(&mut gpiob.crh);
-
+    let mut adc1 = adc::Adc::adc1(p.device.ADC1, &mut rcc.apb2, clocks);
+    bluepill::init_adc(adc1);
     let i2c = BlockingI2c::i2c1(
         p.device.I2C1,
         (scl, sda),
@@ -79,21 +85,8 @@ fn main() -> ! {
     display.init().unwrap();
     let (w, h) = display.dimensions();
 
-    let mut tim = Timer::tim1(p.device.TIM1, &clocks, &mut rcc.apb2).start_count_down(1.mhz());
-    let mut tm1637 = TM1637::new(dio, clk, &mut tim);
-    tm1637.set_brightness(5);
     let mut delay = Delay::new(p.core.SYST, clocks);
-    // let bmp = Bmp::from_slice(include_bytes!("./sqb.bmp")).expect("Failed to load BMP image");
 
-    // // The image is an RGB565 encoded BMP, so specifying the type as `Image<Bmp<Rgb565>>` will read
-    // // the pixels correctly
-    // let im: Image<Bmp<Rgb565>> = Image::new(&bmp, Point::new(32, 0));
-
-    // // We use the `color_converted` method here to automatically convert the RGB565 image data into
-    // // BinaryColor values.
-    // im.draw(&mut display.color_converted()).unwrap();
-
-    // display.flush().unwrap();
     let raw: ImageRaw<BinaryColor> = ImageRaw::new(include_bytes!("./sqb.raw"), 120);
 
     Image::new(&raw, Point::new(4, 1))
@@ -101,21 +94,21 @@ fn main() -> ! {
         .unwrap();
     display.flush().unwrap();
     let style = MonoTextStyle::new(&FONT_10X20, BinaryColor::On);
-    Text::with_alignment("100", Point::new(20, 60), style, Alignment::Center)
+    loop {
+        let temp = bluepill::chip_temp().unwrap();
+        display.clear();
+        Image::new(&raw, Point::new(4, 1))
+            .draw(&mut display)
+            .unwrap();
+        Text::with_alignment(
+            alloc::format!("Temp: {}C", temp).as_str(),
+            Point::new(45, 60),
+            style,
+            Alignment::Center,
+        )
         .draw(&mut display)
         .unwrap();
-
-    display.flush().unwrap();
-
-    let mut colon = true;
-    loop {
-        if colon {
-            tm1637.write(&['1', '2', '3', '4'], Some(true));
-            colon = false;
-        } else {
-            tm1637.write(&['1', '2', '3', '4'], None);
-            colon = true;
-        }
+        display.flush().unwrap();
         delay.delay_ms(500u32);
     }
 }

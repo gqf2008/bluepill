@@ -1,6 +1,7 @@
 #![no_main]
 #![no_std]
 #![feature(alloc_error_handler)]
+
 use bluepill::clocks::ClockExt;
 use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;

@@ -14,6 +14,7 @@ use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
+
 use bluepill::hal::timer::Timer;
 use bluepill::io::*;
 use bluepill::net::esp826601s;
@@ -28,6 +29,7 @@ use cortex_m::asm;
 use cortex_m::{asm::wfi, interrupt::Mutex};
 use cortex_m_rt::entry;
 use hal::{
+    adc,
     pac::interrupt,
     pac::Interrupt,
     pac::{USART1, USART2},
@@ -60,6 +62,8 @@ fn main() -> ! {
     let clocks = rcc.cfgr.clocks_72mhz(&mut flash.acr); //配置全速时钟
     let mut gpioa = p.device.GPIOA.split(&mut rcc.apb2);
     let mut gpioc = p.device.GPIOC.split(&mut rcc.apb2);
+    let mut adc1 = adc::Adc::adc1(p.device.ADC1, &mut rcc.apb2, clocks);
+    bluepill::init_adc(adc1);
 
     let mut delay = Delay::new(p.core.SYST, clocks);
 
@@ -91,7 +95,7 @@ fn main() -> ! {
     sprintln!("new esp826601s ok");
     //wifi.hello().ok();
     // wifi.hangup().ok();
-    // wifi.dial("Wosai-Guest", "Shouqianba$520", false).ok();
+    wifi.dial("Wosai-Guest", "Shouqianba$520", false).ok();
     match wifi.device_info() {
         Ok(inf) => sprint!("{}", inf),
         Err(bluepill::io::Error::Other(err)) => sprint!("{:?}", err),
@@ -107,6 +111,14 @@ fn main() -> ! {
         }
     }
 
+    match wifi.net_state() {
+        Ok(inf) => sprint!("{}", inf),
+        Err(bluepill::io::Error::Other(err)) => sprint!("{:?}", err),
+        Err(err) => {
+            sprintln!("{:?}", err)
+        }
+    }
+
     loop {
         match wifi.connect(("172.18.61.78", "443")) {
             Ok(reply) => {
@@ -114,10 +126,10 @@ fn main() -> ! {
             }
             Err(err) => sprintln!("{:?}", err),
         }
-        if let Some(size) = wifi.send_data(b"1111111111").ok() {
+        if let Some(size) = wifi.send_data(b"1111111111", 5000).ok() {
             sprintln!("sent {}", size);
         }
-        if let Some(reply) = wifi.read_data(10).ok() {
+        if let Some(reply) = wifi.read_data(10, 5000).ok() {
             sprint!("{}", reply);
         }
         wifi.disconnect().ok();

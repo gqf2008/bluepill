@@ -114,6 +114,7 @@ dependencies = [
  "embedded-dma",
  "embedded-graphics",
  "embedded-hal",
+ "epd-waveshare",
  "heapless 0.7.3",
  "hex",
  "m",
@@ -404,6 +405,16 @@ checksum = "db184d3fa27bc7a2344250394c0264144dfe0bc81a4401801dcb964b8dd172ad"
 dependencies = [
  "nb 0.1.3",
  "void",
+]
+
+[[package]]
+name = "epd-waveshare"
+version = "0.5.0"
+dependencies = [
+ "bit_field",
+ "embedded-graphics",
+ "embedded-graphics-core",
+ "embedded-hal",
 ]
 
 [[package]]

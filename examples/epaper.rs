@@ -9,7 +9,6 @@ use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
 use bluepill::hal::spi::{Mode, Phase, Polarity, Spi};
 use bluepill::led::Led;
-
 use bluepill::*;
 use cortex_m_rt::entry;
 use embedded_graphics::{
@@ -19,9 +18,9 @@ use embedded_graphics::{
     text::{Baseline, Text, TextStyleBuilder},
 };
 use embedded_hal::blocking::delay::{DelayMs, DelayUs};
+use embedded_hal::digital::v2::{InputPin, OutputPin};
 use embedded_hal::prelude::*;
 use epd_waveshare::epd2in7b::{Display2in7b, Epd2in7b};
-use epd_waveshare::epd7in5b_v2::Epd7in5bc;
 use epd_waveshare::{
     color::*,
     graphics::{DisplayRotation, TriDisplay},
@@ -70,9 +69,9 @@ fn main() -> ! {
         .split();
     stdio::use_tx1(stdout);
     sprintln!("epaper");
-    let busy = gpioa.pa1.into_pull_down_input(&mut gpioa.crl); //输入
-    let rst = gpioa.pa2.into_push_pull_output(&mut gpioa.crl); //输出
-    let dc = gpioa.pa3.into_push_pull_output(&mut gpioa.crl); //输出
+    let mut busy = gpioa.pa3.into_floating_input(&mut gpioa.crl); //输入
+    let rst = gpioa.pa1.into_push_pull_output(&mut gpioa.crl); //输出
+    let dc = gpioa.pa2.into_push_pull_output(&mut gpioa.crl); //输出
     let cs = gpioa.pa4.into_push_pull_output(&mut gpioa.crl); //输出
     let pins = (
         gpioa.pa5.into_alternate_push_pull(&mut gpioa.crl), //时钟输出
@@ -81,7 +80,7 @@ fn main() -> ! {
     );
 
     let spi_mode = Mode {
-        polarity: Polarity::IdleLow,
+        polarity: Polarity::IdleHigh,
         phase: Phase::CaptureOnFirstTransition,
     };
 
@@ -124,11 +123,29 @@ fn main() -> ! {
     epd.display_frame(&mut spi, &mut delay).ok();
 
     // // // Set the EPD to sleep
-    epd.sleep(&mut spi, &mut delay).ok();
+    // epd.sleep(&mut spi, &mut delay).ok();
 
     loop {
         led.toggle();
         delay.delay_ms(1_000u32);
+        sprintln!("clear_frame {}", epd.is_busy());
+        // epd.clear_frame(&mut spi, &mut delay).ok();
+        sprintln!("draw line1 {}", epd.is_busy());
+        Line::new(Point::new(10, 10), Point::new(10, 20))
+            .into_styled(PrimitiveStyle::with_stroke(Black, 1))
+            .draw(&mut mono_display)
+            .ok();
+        sprintln!("draw line2 {}", epd.is_busy());
+        Line::new(Point::new(15, 120), Point::new(15, 200))
+            .into_styled(PrimitiveStyle::with_stroke(Black, 1))
+            .draw(&mut chromatic_display)
+            .ok();
+        sprintln!("update_achromatic_frame {}", epd.is_busy());
+        epd.update_achromatic_frame(&mut spi, mono_display.buffer());
+        sprintln!("update_chromatic_frame {}", epd.is_busy());
+        epd.update_chromatic_frame(&mut spi, chromatic_display.buffer());
+        sprintln!("display_frame {}", epd.is_busy());
+        epd.display_frame(&mut spi, &mut delay).ok();
     }
 }
 

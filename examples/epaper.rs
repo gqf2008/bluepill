@@ -26,6 +26,7 @@ use epd_waveshare::{
     graphics::{DisplayRotation, TriDisplay},
     prelude::*,
 };
+
 // use panic_semihosting as _;
 use panic_halt as _;
 
@@ -123,13 +124,14 @@ fn main() -> ! {
     epd.display_frame(&mut spi, &mut delay).ok();
 
     // // // Set the EPD to sleep
-    // epd.sleep(&mut spi, &mut delay).ok();
+    //epd.sleep(&mut spi, &mut delay).ok();
 
     loop {
         led.toggle();
         delay.delay_ms(1_000u32);
+        //epd.wake_up(&mut spi, &mut delay).ok();
         sprintln!("clear_frame {}", epd.is_busy());
-        // epd.clear_frame(&mut spi, &mut delay).ok();
+        epd.clear_frame(&mut spi, &mut delay).ok();
         sprintln!("draw line1 {}", epd.is_busy());
         Line::new(Point::new(10, 10), Point::new(10, 20))
             .into_styled(PrimitiveStyle::with_stroke(Black, 1))
@@ -146,6 +148,7 @@ fn main() -> ! {
         epd.update_chromatic_frame(&mut spi, chromatic_display.buffer());
         sprintln!("display_frame {}", epd.is_busy());
         epd.display_frame(&mut spi, &mut delay).ok();
+        //epd.sleep(&mut spi, &mut delay).ok();
     }
 }
 

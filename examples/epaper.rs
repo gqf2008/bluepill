@@ -7,10 +7,12 @@ use bluepill::hal::delay::Delay;
 use bluepill::hal::gpio::gpioc::PC13;
 use bluepill::hal::gpio::{Output, PushPull};
 use bluepill::hal::prelude::*;
-use bluepill::hal::spi::{Mode, Phase, Polarity, Spi};
+use bluepill::hal::spi::{Mode, NoMiso, Phase, Polarity, Spi};
 use bluepill::led::Led;
 use bluepill::*;
 use cortex_m_rt::entry;
+
+use embedded_graphics::mock_display::MockDisplay;
 use embedded_graphics::{
     mono_font::MonoTextStyleBuilder,
     prelude::*,
@@ -18,7 +20,8 @@ use embedded_graphics::{
     text::{Baseline, Text, TextStyleBuilder},
 };
 use embedded_hal::blocking::delay::{DelayMs, DelayUs};
-use embedded_hal::digital::v2::{InputPin, OutputPin};
+use embedded_hal::blocking::spi::Write;
+use embedded_hal::digital::v2::*;
 use embedded_hal::prelude::*;
 use epd_waveshare::epd2in7b::{Display2in7b, Epd2in7b};
 use epd_waveshare::{
@@ -70,18 +73,19 @@ fn main() -> ! {
         .split();
     stdio::use_tx1(stdout);
     sprintln!("epaper");
-    let mut busy = gpioa.pa3.into_floating_input(&mut gpioa.crl); //输入
+    let mut busy = gpioa.pa3.into_pull_up_input(&mut gpioa.crl); //输入
     let rst = gpioa.pa1.into_push_pull_output(&mut gpioa.crl); //输出
     let dc = gpioa.pa2.into_push_pull_output(&mut gpioa.crl); //输出
     let cs = gpioa.pa4.into_push_pull_output(&mut gpioa.crl); //输出
     let pins = (
         gpioa.pa5.into_alternate_push_pull(&mut gpioa.crl), //时钟输出
-        gpioa.pa6.into_floating_input(&mut gpioa.crl),      //输入
+        // gpioa.pa6.into_floating_input(&mut gpioa.crl),      //输入
+        NoMiso,
         gpioa.pa7.into_alternate_push_pull(&mut gpioa.crl), //输出
     );
 
     let spi_mode = Mode {
-        polarity: Polarity::IdleHigh,
+        polarity: Polarity::IdleLow,
         phase: Phase::CaptureOnFirstTransition,
     };
 
@@ -90,7 +94,7 @@ fn main() -> ! {
         pins,
         &mut afio.mapr,
         spi_mode,
-        10.mhz(),
+        4.mhz(),
         clocks,
         &mut rcc.apb2,
     );

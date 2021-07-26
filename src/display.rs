@@ -1,3 +1,5 @@
+pub mod epd27b;
+pub mod epd75b;
 pub mod ssd1306;
 pub mod tm1637;
 

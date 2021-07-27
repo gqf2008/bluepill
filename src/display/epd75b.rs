@@ -7,23 +7,25 @@ const WIDTH: usize = 800;
 const HEIGHT: usize = 480;
 const WIDE: usize = WIDTH / 8;
 
-pub struct EPD75b<SPI, IN, OUT, DELAY> {
+pub struct EPD75b<SPI, CS, DC, RST, BUSY, DELAY> {
     spi: SPI,
-    cs: OUT,
-    busy: IN,
-    dc: OUT,
-    rst: OUT,
+    cs: CS,
+    busy: BUSY,
+    dc: DC,
+    rst: RST,
     delay: DELAY,
 }
 
-impl<SPI, IN, OUT, DELAY> EPD75b<SPI, IN, OUT, DELAY>
+impl<SPI, CS, DC, RST, BUSY, DELAY> EPD75b<SPI, CS, DC, RST, BUSY, DELAY>
 where
     SPI: Write<u8>,
-    IN: InputPin,
-    OUT: OutputPin,
+    BUSY: InputPin,
+    DC: OutputPin,
+    CS: OutputPin,
+    RST: OutputPin,
     DELAY: DelayMs<u8>,
 {
-    pub fn new(spi: SPI, cs: OUT, dc: OUT, rst: OUT, busy: IN, delay: DELAY) -> Self {
+    pub fn new(spi: SPI, cs: CS, dc: DC, rst: RST, busy: BUSY, delay: DELAY) -> Self {
         Self {
             spi,
             cs,

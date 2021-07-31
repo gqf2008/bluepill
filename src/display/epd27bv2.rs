@@ -5,7 +5,7 @@ use embedded_hal::digital::v2::*;
 const WIDTH: usize = 176;
 const HEIGHT: usize = 264;
 const NUM_DISPLAY_BITS: usize = WIDTH * HEIGHT / 8;
-pub struct EPD27b<SPI, CS, DC, RST, BUSY, DELAY> {
+pub struct EPD27<SPI, CS, DC, RST, BUSY, DELAY> {
     spi: SPI,
     cs: CS,
     busy: BUSY,
@@ -14,7 +14,7 @@ pub struct EPD27b<SPI, CS, DC, RST, BUSY, DELAY> {
     delay: DELAY,
 }
 
-impl<SPI, CS, DC, RST, BUSY, DELAY> EPD27b<SPI, CS, DC, RST, BUSY, DELAY>
+impl<SPI, CS, DC, RST, BUSY, DELAY> EPD27<SPI, CS, DC, RST, BUSY, DELAY>
 where
     SPI: Write<u8>,
     BUSY: InputPin,

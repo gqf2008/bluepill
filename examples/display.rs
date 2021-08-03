@@ -54,8 +54,8 @@ fn main() -> ! {
     let clocks = rcc.cfgr.clocks_48mhz(&mut flash.acr);
     let mut afio = p.device.AFIO.constrain(&mut rcc.apb2);
     let mut gpiob = p.device.GPIOB.split(&mut rcc.apb2);
-    let clk = gpiob.pb6.into_open_drain_output(&mut gpiob.crl);
-    let dio = gpiob.pb7.into_open_drain_output(&mut gpiob.crl);
+    // let clk = gpiob.pb6.into_open_drain_output(&mut gpiob.crl);
+    // let dio = gpiob.pb7.into_open_drain_output(&mut gpiob.crl);
     let scl = gpiob.pb8.into_alternate_open_drain(&mut gpiob.crh);
     let sda = gpiob.pb9.into_alternate_open_drain(&mut gpiob.crh);
     let mut adc1 = adc::Adc::adc1(p.device.ADC1, &mut rcc.apb2, clocks);

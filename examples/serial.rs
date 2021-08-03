@@ -58,7 +58,8 @@ fn main() -> ! {
 
     let (mut stdout, mut stdin) = bluepill::serial::Serial::with_usart(p.device.USART1)
         .pins(gpioa.pa9, gpioa.pa10) //映射到引脚
-        .cr(&mut gpioa.crh) //配置GPIO控制寄存器
+        .cr(&mut gpioa.crh)
+        .baudrate(9600) //配置GPIO控制寄存器
         .clocks(clocks) //时钟
         .afio_mapr(&mut afio.mapr) //复用重映射即寄存器
         .bus(&mut rcc.apb2) //配置内核总线
@@ -77,17 +78,18 @@ fn main() -> ! {
     rx2.listen();
 
     stdout.write_str("Hello ESP8266\n");
-    cortex_m::interrupt::free(|_| unsafe {
-        STDOUT.replace(stdout);
-        STDIN.replace(stdin);
-        TX2.replace(tx2);
-        RX2.replace(rx2);
-    });
-    //开启USART1、USART2中断
-    bluepill::enable_interrupt(stm32f1xx_hal::pac::Interrupt::USART1);
-    bluepill::enable_interrupt(stm32f1xx_hal::pac::Interrupt::USART2);
+    // cortex_m::interrupt::free(|_| unsafe {
+    //     STDOUT.replace(stdout);
+    //     STDIN.replace(stdin);
+    //     TX2.replace(tx2);
+    //     RX2.replace(rx2);
+    // });
+    // //开启USART1、USART2中断
+    // bluepill::enable_interrupt(stm32f1xx_hal::pac::Interrupt::USART1);
+    // bluepill::enable_interrupt(stm32f1xx_hal::pac::Interrupt::USART2);
     loop {
         led.toggle();
+        stdout.write_str("Hello ESP8266\n");
         delay.delay_ms(1_000u32);
     }
 }
